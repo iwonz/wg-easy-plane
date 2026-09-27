@@ -2,6 +2,13 @@
 
 All notable changes are generated automatically from Conventional Commits.
 
+## [2.1.1](https://github.com/iwonz/wg-easy-plane/compare/v2.1.0...v2.1.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **dev:** allow loopback origins for HMR ([2653155](https://github.com/iwonz/wg-easy-plane/commit/2653155a3a2401561afd88ca32b9d7beac04ca1a))
+
 # [2.1.0](https://github.com/iwonz/wg-easy-plane/compare/v2.0.0...v2.1.0) (2026-09-27)
 
 
