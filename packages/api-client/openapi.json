@@ -1,0 +1,168 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "WG Easy Plane API",
+    "version": "0.0.0",
+    "description": "Typed API for the WG Easy Plane control plane."
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "wgep_access"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "wgep_pat_*"
+      },
+      "subscriptionSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "wgep_subscription"
+      }
+    },
+    "schemas": {
+      "CursorQuery": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          }
+        }
+      },
+      "CursorPage": {
+        "type": "object",
+        "properties": {
+          "nextCursor": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["nextCursor"]
+      },
+      "SystemStatus": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["wg-easy-plane"]
+          },
+          "version": {
+            "type": "string"
+          },
+          "apiVersion": {
+            "type": "string",
+            "enum": ["v1"]
+          },
+          "supportedWgEasyVersion": {
+            "type": "string",
+            "enum": ["15.4.0"]
+          }
+        },
+        "required": ["name", "version", "apiVersion", "supportedWgEasyVersion"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "$ref": "#/components/schemas/ErrorCode"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "requestId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": ["code", "message", "requestId"]
+          }
+        },
+        "required": ["error"]
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "BAD_REQUEST",
+          "UNAUTHORIZED",
+          "FORBIDDEN",
+          "NOT_FOUND",
+          "CONFLICT",
+          "VALIDATION_ERROR",
+          "RATE_LIMITED",
+          "UPSTREAM_ERROR",
+          "INTERNAL_ERROR"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/v1/system/status": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Read public control-plane compatibility status",
+        "responses": {
+          "200": {
+            "description": "Control-plane status",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatus"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

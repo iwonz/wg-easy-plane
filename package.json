@@ -9,6 +9,8 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "api:check": "pnpm api:generate && git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts",
+    "api:generate": "tsx scripts/generate-openapi.ts && openapi-typescript packages/api-client/openapi.json -o packages/api-client/src/schema.d.ts && prettier packages/api-client/openapi.json packages/api-client/src/schema.d.ts --write",
     "dev": "turbo run dev --parallel",
     "dev:panel": "pnpm --filter @wg-easy-plane/panel dev",
     "dev:subscription": "pnpm --filter @wg-easy-plane/subscription dev",
@@ -19,7 +21,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "turbo run typecheck",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && openspec validate --all --strict && openspec validate --archived --strict"
+    "verify": "pnpm api:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && openspec validate --all --strict && openspec validate --archived --strict"
   },
   "devDependencies": {
     "@types/node": "26.6.3",
@@ -29,8 +31,10 @@
     "drizzle-kit": "0.31.11",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.6",
+    "openapi-typescript": "7.13.0",
     "prettier": "3.9.9",
     "turbo": "2.11.4",
+    "tsx": "4.23.13",
     "typescript": "6.0.3",
     "vitest": "5.0.2"
   }
