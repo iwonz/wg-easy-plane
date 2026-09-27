@@ -7,7 +7,8 @@ import type {
   UpdateNodeRequest,
 } from '@wg-easy-plane/contracts';
 
-type NodeFailure = 'load' | 'create' | 'update' | 'test' | 'delete' | null;
+type NodeFailure =
+  'load' | 'create' | 'update' | 'test' | 'sync' | 'delete' | null;
 type Fetcher = typeof globalThis.fetch;
 
 type NodeListResponse = {
@@ -23,6 +24,7 @@ export class NodeStore {
   loading = false;
   submitting = false;
   testingNodeId: string | null = null;
+  syncingNodeId: string | null = null;
 
   constructor(
     private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
@@ -145,6 +147,36 @@ export class NodeStore {
     } finally {
       runInAction(() => {
         this.submitting = false;
+      });
+    }
+  }
+
+  async sync(nodeId: string): Promise<boolean> {
+    this.syncingNodeId = nodeId;
+    this.failure = null;
+    try {
+      const response = await this.fetcher(`/api/v1/nodes/${nodeId}/sync`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+      if (!response.ok) throw new Error('Unable to synchronize node');
+      const nodeResponse = await this.fetcher(`/api/v1/nodes/${nodeId}`, {
+        credentials: 'same-origin',
+      });
+      if (!nodeResponse.ok) throw new Error('Unable to refresh node');
+      const node = (await nodeResponse.json()) as NodeMetadata;
+      runInAction(() => {
+        this.#replace(node);
+      });
+      return true;
+    } catch {
+      runInAction(() => {
+        this.failure = 'sync';
+      });
+      return false;
+    } finally {
+      runInAction(() => {
+        this.syncingNodeId = null;
       });
     }
   }

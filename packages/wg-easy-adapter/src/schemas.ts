@@ -124,7 +124,26 @@ export const WgEasyRawClientSchema = z
   })
   .strict();
 
-export const WgEasyClientListResponseSchema = z.array(WgEasyRawClientSchema);
+export const WgEasyClientListResponseSchema = z
+  .array(WgEasyRawClientSchema)
+  .superRefine((clients, context) => {
+    const seen = new Set<number>();
+    for (const [index, client] of clients.entries()) {
+      if (seen.has(client.id)) {
+        context.addIssue({
+          code: 'custom',
+          path: [index, 'id'],
+          message: 'Client identifiers must be unique',
+        });
+      }
+      seen.add(client.id);
+    }
+  });
+
+export const WgEasyClientSchema = WgEasyRawClientSchema.omit({
+  oneTimeLink: true,
+  endpoint: true,
+}).strict();
 
 export const WgEasyClientCreateRequestSchema = z
   .object({
@@ -181,11 +200,11 @@ export type WgEasyClientUpdateRequest = z.infer<
   typeof WgEasyClientUpdateRequestSchema
 >;
 
-export type WgEasyClient = Omit<WgEasyRawClient, 'oneTimeLink' | 'endpoint'>;
+export type WgEasyClient = z.infer<typeof WgEasyClientSchema>;
 
 export function safeClientProjection(client: WgEasyRawClient): WgEasyClient {
   const { oneTimeLink, endpoint, ...safe } = client;
   void oneTimeLink;
   void endpoint;
-  return safe;
+  return WgEasyClientSchema.parse(safe);
 }

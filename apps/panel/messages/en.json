@@ -41,6 +41,7 @@
     "editTitle": "Edit node",
     "save": "Save",
     "test": "Retest",
+    "sync": "Sync",
     "testConnection": "Test connection",
     "delete": "Delete",
     "deleteTitle": "Delete node",
@@ -53,10 +54,14 @@
     "insecureBadge": "TLS verification off",
     "insecureGlobalTitle": "Insecure TLS is enabled",
     "insecureGlobalDescription": "At least one node accepts an unverified TLS certificate. Review this exception regularly.",
+    "compatibilityGlobalTitle": "Client mutations are blocked",
+    "compatibilityGlobalDescription": "At least one node has an unsupported wg-easy version or incompatible API. Its last safe inventory remains available.",
     "insecureFormTitle": "Certificate verification will be disabled",
     "insecureFormDescription": "Use this only for a node you control. A network attacker could impersonate the node.",
     "testVersion": "Detected wg-easy {version}.",
     "testNoVersion": "No compatible wg-easy version could be confirmed.",
+    "checkedAt": "Checked: {value}",
+    "syncedAt": "Synced: {value}",
     "columns": {
       "name": "Name",
       "endpoint": "Endpoint",
@@ -93,7 +98,40 @@
       "create": "The node could not be added. Check for duplicate names or endpoints.",
       "update": "The node could not be updated.",
       "test": "The connection test could not be completed.",
+      "sync": "The client inventory could not be synchronized.",
       "delete": "The node could not be deleted. Remove its managed placements first."
+    }
+  },
+  "clients": {
+    "title": "Clients",
+    "description": "Review clients discovered on each node. Matching names remain separate until explicitly adopted.",
+    "refresh": "Refresh list",
+    "loading": "Loading discovered clients",
+    "loadFailure": "The discovered client inventory could not be loaded.",
+    "empty": "No clients have been discovered. Synchronize a healthy node first.",
+    "loadMore": "Load more",
+    "managedPending": "Managed clients will be available after the lifecycle change is installed.",
+    "tabs": {
+      "managed": "Managed",
+      "discovered": "Discovered"
+    },
+    "columns": {
+      "client": "Client",
+      "node": "Node",
+      "addresses": "Addresses",
+      "expiry": "Expires",
+      "seen": "Last seen",
+      "state": "State"
+    },
+    "states": {
+      "current": "Current",
+      "stale": "Last safe snapshot",
+      "missing": "Missing",
+      "disabled": "Disabled"
+    },
+    "modes": {
+      "wireguard": "WireGuard",
+      "amnezia": "AmneziaWG"
     }
   },
   "tokens": {

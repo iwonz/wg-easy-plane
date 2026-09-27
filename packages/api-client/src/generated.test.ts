@@ -24,6 +24,8 @@ describe('generated API client artifacts', () => {
       '/api/v1/nodes/test',
       '/api/v1/nodes/{nodeId}',
       '/api/v1/nodes/{nodeId}/test',
+      '/api/v1/nodes/{nodeId}/sync',
+      '/api/v1/clients/discovered',
     ]) {
       expect(source).toContain(`'${path}'`);
     }
@@ -47,5 +49,28 @@ describe('generated API client artifacts', () => {
     expect(properties).not.toHaveProperty('password');
     expect(properties).not.toHaveProperty('usernameCiphertext');
     expect(properties).not.toHaveProperty('passwordCiphertext');
+  });
+
+  it('keeps upstream secrets and delivery payloads out of discovered clients', async () => {
+    const document = JSON.parse(
+      await readFile(path.resolve('packages/api-client/openapi.json'), 'utf8'),
+    ) as {
+      components: {
+        schemas: {
+          DiscoveredClientPublicData: {
+            properties: Record<string, unknown>;
+          };
+        };
+      };
+    };
+    const properties =
+      document.components.schemas.DiscoveredClientPublicData.properties;
+
+    expect(properties).not.toHaveProperty('endpoint');
+    expect(properties).not.toHaveProperty('oneTimeLink');
+    expect(properties).not.toHaveProperty('configuration');
+    expect(properties).not.toHaveProperty('qr');
+    expect(properties).not.toHaveProperty('publicKey');
+    expect(properties).not.toHaveProperty('serverEndpoint');
   });
 });

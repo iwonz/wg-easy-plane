@@ -40,6 +40,10 @@ describe('wg-easy 15.4.0 schemas', () => {
         { ...clients[0], unexpected: true },
       ]).success,
     ).toBe(false);
+    expect(
+      WgEasyClientListResponseSchema.safeParse([clients[0], clients[0]])
+        .success,
+    ).toBe(false);
   });
 
   it('projects one-time links and runtime endpoints out of safe clients', () => {

@@ -11,6 +11,7 @@ export type { WgEasyAdapterErrorCode, WgEasyOperation } from './errors';
 export {
   safeClientProjection,
   SUPPORTED_WG_EASY_VERSION,
+  WgEasyClientSchema,
   WgEasyClientCreateRequestSchema,
   WgEasyClientListResponseSchema,
   WgEasyClientUpdateRequestSchema,

@@ -163,6 +163,11 @@ export const NodeManagement = observer(function NodeManagement() {
   };
 
   const hasInsecureNode = store.items.some((node) => node.allowInsecureTls);
+  const hasCompatibilityIssue = store.items.some(
+    (node) =>
+      node.status === 'unsupported_version' ||
+      node.status === 'api_incompatible',
+  );
 
   return (
     <>
@@ -175,6 +180,12 @@ export const NodeManagement = observer(function NodeManagement() {
             </div>
             <Button onClick={openCreate}>{t('add')}</Button>
           </Group>
+
+          {hasCompatibilityIssue ? (
+            <Alert color="orange" title={t('compatibilityGlobalTitle')}>
+              {t('compatibilityGlobalDescription')}
+            </Alert>
+          ) : null}
 
           {hasInsecureNode ? (
             <Alert color="orange" title={t('insecureGlobalTitle')}>
@@ -241,7 +252,20 @@ export const NodeManagement = observer(function NodeManagement() {
                           ) : null}
                         </Stack>
                       </Table.Td>
-                      <Table.Td>{formatDate(node.lastCheckedAt)}</Table.Td>
+                      <Table.Td>
+                        <Stack gap={2}>
+                          <Text size="sm">
+                            {t('checkedAt', {
+                              value: formatDate(node.lastCheckedAt),
+                            })}
+                          </Text>
+                          <Text c="dimmed" size="xs">
+                            {t('syncedAt', {
+                              value: formatDate(node.lastSyncedAt),
+                            })}
+                          </Text>
+                        </Stack>
+                      </Table.Td>
                       <Table.Td>
                         <Group gap="xs" wrap="nowrap">
                           <Button
@@ -251,6 +275,14 @@ export const NodeManagement = observer(function NodeManagement() {
                             variant="light"
                           >
                             {t('test')}
+                          </Button>
+                          <Button
+                            loading={store.syncingNodeId === node.id}
+                            onClick={() => void store.sync(node.id)}
+                            size="xs"
+                            variant="light"
+                          >
+                            {t('sync')}
                           </Button>
                           <Button
                             onClick={() => openEdit(node)}

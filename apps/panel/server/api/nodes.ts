@@ -48,10 +48,15 @@ export function registerNodeRoutes(
       requiredScope: 'nodes:write',
       mutation: true,
     });
-    return context.json(
-      await runtime.nodeService.create(context.req.valid('json')),
-      201,
-    );
+    const node = await runtime.nodeService.create(context.req.valid('json'));
+    if (node.status === 'healthy' && runtime.inventorySyncService) {
+      try {
+        await runtime.inventorySyncService.syncNode(node.id);
+      } catch {
+        // The node remains registered and the sync run stores a safe failure.
+      }
+    }
+    return context.json(runtime.nodeService.get(node.id), 201);
   });
 
   api.openapi(testNodeConnectionRoute, async (context) => {

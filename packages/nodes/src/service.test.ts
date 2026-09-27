@@ -7,6 +7,7 @@ import type { DatabaseConnection } from '@wg-easy-plane/database';
 import { migrateDatabase } from '@wg-easy-plane/database/migrations';
 import {
   WgEasyAdapterError,
+  type WgEasyClient,
   type WgEasyConnection,
   type WgEasyProbe,
 } from '@wg-easy-plane/wg-easy-adapter';
@@ -259,6 +260,55 @@ describe('NodeService', () => {
       mode: 'amnezia',
       lastErrorCode: 'TIMEOUT',
       lastCheckedAt: '2026-09-27T10:01:00.000Z',
+    });
+  });
+
+  it('fetches stored inventory without exposing credentials and preserves sync metadata on failure', async () => {
+    const fixture = createFixture();
+    fixture.outcomes.push(healthyProbe());
+    const created = await fixture.service.create(createInput());
+    fixture.connection.sqlite
+      .prepare('update nodes set last_synced_at = ? where id = ?')
+      .run(Date.parse('2026-09-27T09:00:00.000Z'), created.id);
+
+    fixture.advance(1_000);
+    fixture.outcomes.push({
+      ...healthyProbe('amnezia'),
+      clients: [
+        {
+          id: 7,
+          name: 'Synthetic discovered client',
+        } as WgEasyClient,
+      ],
+    });
+    const fetched = await fixture.service.fetchInventory(created.id);
+    expect(fetched).toMatchObject({
+      ok: true,
+      upstreamVersion: '15.4.0',
+      node: { status: 'healthy', mode: 'amnezia' },
+      clients: [{ id: 7, name: 'Synthetic discovered client' }],
+    });
+    expect(JSON.stringify(fetched)).not.toContain('synthetic-admin');
+    expect(JSON.stringify(fetched)).not.toContain('synthetic-password');
+    expect(fixture.calls.at(-1)).toMatchObject({
+      username: 'synthetic-admin-1',
+      password: 'synthetic-password-1',
+    });
+
+    fixture.advance(1_000);
+    fixture.outcomes.push(
+      new WgEasyAdapterError({ code: 'TIMEOUT', operation: 'information' }),
+    );
+    const failed = await fixture.service.fetchInventory(created.id);
+    expect(failed).toMatchObject({
+      ok: false,
+      errorCode: 'TIMEOUT',
+      node: {
+        status: 'unreachable',
+        detectedVersion: '15.4.0',
+        mode: 'amnezia',
+        lastSyncedAt: '2026-09-27T09:00:00.000Z',
+      },
     });
   });
 

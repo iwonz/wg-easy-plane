@@ -564,6 +564,198 @@
           }
         },
         "additionalProperties": false
+      },
+      "SyncRunSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SyncRunStatus"
+          },
+          "seenCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "missingCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "errorCode": {
+            "$ref": "#/components/schemas/SyncErrorCode"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nodeId",
+          "status",
+          "seenCount",
+          "missingCount",
+          "errorCode",
+          "startedAt",
+          "finishedAt"
+        ],
+        "additionalProperties": false
+      },
+      "SyncRunStatus": {
+        "type": "string",
+        "enum": ["succeeded", "failed"]
+      },
+      "SyncErrorCode": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/NodeErrorCode"
+          },
+          {
+            "type": "string",
+            "enum": ["INTERRUPTED", "INTERNAL_ERROR"]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "DiscoveredClientList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscoveredClient"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/CursorPage"
+          }
+        },
+        "required": ["items", "page"],
+        "additionalProperties": false
+      },
+      "DiscoveredClient": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nodeName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nodeMode": {
+            "$ref": "#/components/schemas/NodeMode"
+          },
+          "nodeStatus": {
+            "$ref": "#/components/schemas/NodeStatus"
+          },
+          "remoteClientId": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "publicData": {
+            "$ref": "#/components/schemas/DiscoveredClientPublicData"
+          },
+          "upstreamVersion": {
+            "type": "string",
+            "enum": ["15.4.0"]
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "missingAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "nodeId",
+          "nodeName",
+          "nodeMode",
+          "nodeStatus",
+          "remoteClientId",
+          "publicData",
+          "upstreamVersion",
+          "firstSeenAt",
+          "lastSeenAt",
+          "missingAt"
+        ],
+        "additionalProperties": false
+      },
+      "DiscoveredClientPublicData": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "ipv4Address": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ipv6Address": {
+            "type": "string",
+            "minLength": 1
+          },
+          "latestHandshakeAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "transferRx": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "transferTx": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "enabled",
+          "expiresAt",
+          "ipv4Address",
+          "ipv6Address",
+          "latestHandshakeAt",
+          "transferRx",
+          "transferTx",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -2705,6 +2897,325 @@
           },
           "404": {
             "description": "Node does not exist",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/nodes/{nodeId}/sync": {
+      "post": {
+        "operationId": "syncNode",
+        "tags": ["Nodes"],
+        "summary": "Synchronize one node client inventory",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "nodeId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Safe synchronization summary",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncRunSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid node identifier",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Untrusted origin or insufficient scope",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node does not exist",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Node synchronization is already active",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/discovered": {
+      "get": {
+        "operationId": "listDiscoveredClients",
+        "tags": ["Clients"],
+        "summary": "List read-only clients discovered on nodes",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cursor-paginated safe discovered-client snapshots",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoveredClientList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or limit",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The credential lacks client-read authority",
             "headers": {
               "X-Request-Id": {
                 "schema": {

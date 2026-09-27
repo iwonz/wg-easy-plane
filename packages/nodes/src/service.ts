@@ -20,6 +20,7 @@ import type { DatabaseConnection } from '@wg-easy-plane/database';
 import {
   WgEasyAdapter,
   WgEasyAdapterError,
+  type WgEasyClient,
   type WgEasyConnection,
   type WgEasyProbe,
 } from '@wg-easy-plane/wg-easy-adapter';
@@ -84,6 +85,19 @@ export type NodePage = {
   items: NodeMetadata[];
   nextCursor: string | null;
 };
+
+export type NodeInventoryFetchResult =
+  | {
+      ok: true;
+      node: NodeMetadata;
+      clients: WgEasyClient[];
+      upstreamVersion: '15.4.0';
+    }
+  | {
+      ok: false;
+      node: NodeMetadata;
+      errorCode: NodeErrorCode;
+    };
 
 function encodeCursor(cursor: NodeCursor): string {
   return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
@@ -486,6 +500,65 @@ export class NodeService {
     return this.get(nodeId);
   }
 
+  async fetchInventory(nodeId: string): Promise<NodeInventoryFetchResult> {
+    const row = this.#requireRow(nodeId);
+    const connection = this.#parseConnection({
+      protocol: row.protocol,
+      host: row.host,
+      port: row.port,
+      username: this.cipher.decrypt(
+        nodeId,
+        'username',
+        row.username_ciphertext,
+      ),
+      password: this.cipher.decrypt(
+        nodeId,
+        'password',
+        row.password_ciphertext,
+      ),
+      allowInsecureTls: row.allow_insecure_tls === 1,
+    });
+    const adapterConnection: WgEasyConnection = {
+      ...connection,
+      timeoutMs: this.requestTimeoutMs,
+    };
+    let probe: WgEasyProbe;
+    try {
+      probe = await this.adapterFactory(adapterConnection).probe();
+    } catch (error) {
+      if (!(error instanceof WgEasyAdapterError)) throw error;
+      const state = mapAdapterFailure(error, this.now().getTime(), {
+        detectedVersion: row.detected_version,
+        mode:
+          row.mode === 'wireguard' || row.mode === 'amnezia' ? row.mode : null,
+      });
+      this.#persistProbeState(nodeId, state);
+      if (!state.lastErrorCode) {
+        throw new Error('Failed inventory probe has no safe error code');
+      }
+      return {
+        ok: false,
+        node: this.get(nodeId),
+        errorCode: state.lastErrorCode,
+      };
+    }
+
+    const state: ProbeState = {
+      status: 'healthy',
+      detectedVersion: probe.information.version,
+      mode: probe.information.mode,
+      lastErrorCode: null,
+      checkedAt: this.now().getTime(),
+    };
+    this.#persistProbeState(nodeId, state);
+    return {
+      ok: true,
+      node: this.get(nodeId),
+      clients: probe.clients,
+      upstreamVersion: probe.information.version,
+    };
+  }
+
   delete(nodeId: string): void {
     this.#requireRow(nodeId);
     const placement = this.connection.sqlite
@@ -542,6 +615,24 @@ export class NodeService {
       .get(nodeId) as NodeRow | undefined;
     if (!row) throw new NodeServiceError('NOT_FOUND', 'Node does not exist');
     return row;
+  }
+
+  #persistProbeState(nodeId: string, probe: ProbeState): void {
+    this.connection.sqlite
+      .prepare(
+        `update nodes set status = ?, detected_version = ?, mode = ?,
+           last_checked_at = ?, last_error_code = ?, updated_at = ?
+         where id = ?`,
+      )
+      .run(
+        probe.status,
+        probe.detectedVersion,
+        probe.mode,
+        probe.checkedAt,
+        probe.lastErrorCode,
+        probe.checkedAt,
+        nodeId,
+      );
   }
 
   async #probe(

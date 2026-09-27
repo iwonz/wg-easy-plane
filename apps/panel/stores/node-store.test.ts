@@ -94,7 +94,7 @@ describe('NodeStore', () => {
     expect(JSON.stringify(store)).not.toContain(connection.password);
   });
 
-  it('updates, retests, and deletes safe node metadata', async () => {
+  it('updates, retests, synchronizes, and deletes safe node metadata', async () => {
     const renamed = { ...node, name: 'Renamed node' };
     const unreachable = {
       ...renamed,
@@ -105,6 +105,26 @@ describe('NodeStore', () => {
       .fn<typeof fetch>()
       .mockResolvedValueOnce(Response.json(renamed))
       .mockResolvedValueOnce(Response.json(unreachable))
+      .mockResolvedValueOnce(
+        Response.json({
+          id: '10000000-0000-4000-8000-000000000001',
+          nodeId: node.id,
+          status: 'succeeded',
+          seenCount: 1,
+          missingCount: 0,
+          errorCode: null,
+          startedAt: '2026-09-27T10:01:00.000Z',
+          finishedAt: '2026-09-27T10:01:01.000Z',
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          ...unreachable,
+          status: 'healthy',
+          lastErrorCode: null,
+          lastSyncedAt: '2026-09-27T10:01:01.000Z',
+        }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     const store = new NodeStore(fetcher);
     store.items = [node];
@@ -115,6 +135,16 @@ describe('NodeStore', () => {
     expect(store.items[0]?.name).toBe(renamed.name);
     await expect(store.retest(node.id)).resolves.toBe(true);
     expect(store.items[0]?.status).toBe('unreachable');
+    await expect(store.sync(node.id)).resolves.toBe(true);
+    expect(store.items[0]?.lastSyncedAt).toBe('2026-09-27T10:01:01.000Z');
+    expect(fetcher).toHaveBeenNthCalledWith(
+      3,
+      `/api/v1/nodes/${node.id}/sync`,
+      {
+        method: 'POST',
+        credentials: 'same-origin',
+      },
+    );
     await expect(store.delete(node.id)).resolves.toBe(true);
     expect(store.items).toHaveLength(0);
   });
@@ -133,6 +163,8 @@ describe('NodeStore', () => {
     expect(store.failure).toBe('update');
     await store.testConnection(connection);
     expect(store.failure).toBe('test');
+    await store.sync(node.id);
+    expect(store.failure).toBe('sync');
     await store.delete(node.id);
     expect(store.failure).toBe('delete');
   });

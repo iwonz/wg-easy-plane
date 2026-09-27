@@ -21,6 +21,7 @@ import { useTranslations } from 'next-intl';
 
 import { AuthStore } from '../stores/auth-store';
 import { ApiTokenManagement } from './api-token-management';
+import { ClientInventory } from './client-inventory';
 import { NodeManagement } from './node-management';
 
 function failureKey(failure: AuthStore['failure']) {
@@ -100,6 +101,7 @@ export const AuthGate = observer(function AuthGate() {
             </Stack>
           </Paper>
           <NodeManagement />
+          <ClientInventory />
           <ApiTokenManagement />
         </Stack>
       </Container>
