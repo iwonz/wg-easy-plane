@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  AdoptManagedClientRequestSchema,
   CreateManagedClientRequestSchema,
   ManagedClientSchema,
   PlacementAdvancedStateSchema,
   PlacementAdvancedValuesSchema,
+  PlacementDriftStateSchema,
   UpdateManagedClientRequestSchema,
 } from './managed-clients';
 
@@ -100,5 +102,75 @@ describe('managed client contracts', () => {
     expect(JSON.stringify(state)).not.toMatch(
       /publicKey|privateKey|presharedKey|configuration|qr/i,
     );
+  });
+
+  it('requires one explicit adoption candidate per node', () => {
+    const request = {
+      name: 'Adopted synthetic',
+      expiresAt: null,
+      enabled: true,
+      selections: [{ nodeId: NODE_ID, remoteClientId: 7 }],
+    };
+    expect(AdoptManagedClientRequestSchema.parse(request)).toEqual(request);
+    expect(
+      AdoptManagedClientRequestSchema.safeParse({
+        ...request,
+        selections: [
+          ...request.selections,
+          { nodeId: NODE_ID, remoteClientId: 8 },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('represents only safe exact drift values and nullable remote state', () => {
+    const mutable = {
+      name: 'Synthetic',
+      enabled: true,
+      expiresAt: null,
+      ipv4Address: '192.0.2.7',
+      ipv6Address: '2001:db8::7',
+      preUp: '',
+      postUp: '',
+      preDown: '',
+      postDown: '',
+      allowedIps: null,
+      serverAllowedIps: [],
+      firewallIps: null,
+      mtu: 1420,
+      jC: null,
+      jMin: null,
+      jMax: null,
+      i1: null,
+      i2: null,
+      i3: null,
+      i4: null,
+      i5: null,
+      persistentKeepalive: 25,
+      serverEndpoint: null,
+      dns: ['192.0.2.53'],
+    };
+    const parsed = PlacementDriftStateSchema.parse({
+      clientId: '20000000-0000-4000-8000-000000000001',
+      placementId: '30000000-0000-4000-8000-000000000001',
+      nodeId: NODE_ID,
+      nodeName: 'Synthetic node',
+      nodeMode: 'wireguard',
+      status: 'missing',
+      snapshotAt: '2026-09-27T10:00:00.000Z',
+      desired: mutable,
+      remote: null,
+      differences: [],
+    });
+    expect(parsed.remote).toBeNull();
+    expect(JSON.stringify(parsed)).not.toMatch(
+      /publicKey|privateKey|presharedKey|configuration|qr/i,
+    );
+    expect(
+      PlacementDriftStateSchema.safeParse({
+        ...parsed,
+        differences: [{ field: 'publicKey', desired: 'one', remote: 'two' }],
+      }).success,
+    ).toBe(false);
   });
 });

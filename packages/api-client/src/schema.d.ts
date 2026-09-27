@@ -313,6 +313,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/clients/managed/adopt': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Adopt explicit unlinked remote clients without mutating upstream */
+    post: operations['adoptManagedClient'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/clients/managed/{clientId}': {
     parameters: {
       query?: never;
@@ -433,6 +450,74 @@ export interface paths {
     head?: never;
     /** Replace the complete advanced state for one placement */
     patch: operations['updatePlacementAdvanced'];
+    trace?: never;
+  };
+  '/api/v1/clients/managed/{clientId}/placements/{placementId}/drift': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Inspect safe desired and remote placement differences */
+    get: operations['getPlacementDrift'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/clients/managed/{clientId}/placements/{placementId}/accept-remote': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Accept current remote state as desired */
+    post: operations['acceptPlacementRemote'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/clients/managed/{clientId}/placements/{placementId}/reapply-desired': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reapply durable desired state to one placement */
+    post: operations['reapplyPlacementDesired'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/clients/managed/{clientId}/placements/{placementId}/recreate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create a fresh remote client for a missing placement */
+    post: operations['recreateMissingPlacement'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/api/v1/clients/managed/{clientId}/placements/{placementId}/candidates': {
@@ -797,6 +882,18 @@ export interface components {
       expiresAt?: string | null;
       nodeIds: string[];
     };
+    AdoptManagedClientRequest: {
+      name: string;
+      /** Format: date-time */
+      expiresAt?: string | null;
+      /** @default true */
+      enabled: boolean;
+      selections: {
+        /** Format: uuid */
+        nodeId: string;
+        remoteClientId: number;
+      }[];
+    };
     UpdateManagedClientRequest: {
       name?: string;
       /** Format: date-time */
@@ -847,6 +944,81 @@ export interface components {
       serverEndpoint: string | null;
       dns: string[] | null;
     };
+    PlacementDriftState: {
+      /** Format: uuid */
+      clientId: string;
+      /** Format: uuid */
+      placementId: string;
+      /** Format: uuid */
+      nodeId: string;
+      nodeName: string;
+      nodeMode: components['schemas']['NodeMode'];
+      status: components['schemas']['PlacementStatus'];
+      /** Format: date-time */
+      snapshotAt: string | null;
+      desired: components['schemas']['PlacementMutableState'];
+      remote: components['schemas']['PlacementMutableState'] &
+        (Record<string, never> | null);
+      differences: components['schemas']['PlacementDriftDifference'][];
+    };
+    PlacementMutableState: {
+      name: string;
+      enabled: boolean;
+      /** Format: date-time */
+      expiresAt: string | null;
+      ipv4Address: string;
+      ipv6Address: string;
+      preUp: string;
+      postUp: string;
+      preDown: string;
+      postDown: string;
+      allowedIps: string[] | null;
+      serverAllowedIps: string[];
+      firewallIps: string[] | null;
+      mtu: number;
+      jC: number | null;
+      jMin: number | null;
+      jMax: number | null;
+      i1: string | null;
+      i2: string | null;
+      i3: string | null;
+      i4: string | null;
+      i5: string | null;
+      persistentKeepalive: number;
+      serverEndpoint: string | null;
+      dns: string[] | null;
+    };
+    PlacementDriftDifference: {
+      field: components['schemas']['PlacementMutableField'];
+      desired: string | number | boolean | null | string[];
+      remote: string | number | boolean | null | string[];
+    };
+    /** @enum {string} */
+    PlacementMutableField:
+      | 'name'
+      | 'enabled'
+      | 'expiresAt'
+      | 'ipv4Address'
+      | 'ipv6Address'
+      | 'preUp'
+      | 'postUp'
+      | 'preDown'
+      | 'postDown'
+      | 'allowedIps'
+      | 'serverAllowedIps'
+      | 'firewallIps'
+      | 'mtu'
+      | 'jC'
+      | 'jMin'
+      | 'jMax'
+      | 'i1'
+      | 'i2'
+      | 'i3'
+      | 'i4'
+      | 'i5'
+      | 'persistentKeepalive'
+      | 'serverEndpoint'
+      | 'dns';
     AmbiguousCreateCandidateList: {
       items: components['schemas']['AmbiguousCreateCandidate'][];
     };
@@ -2342,6 +2514,98 @@ export interface operations {
       };
     };
   };
+  adoptManagedClient: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['AdoptManagedClientRequest'];
+      };
+    };
+    responses: {
+      /** @description Adopted managed client */
+      201: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ManagedClient'];
+        };
+      };
+      /** @description Invalid input */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Managed client, placement, or node does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description The requested lifecycle transition is not safe */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
   getManagedClient: {
     parameters: {
       query?: never;
@@ -3188,6 +3452,370 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PlacementAdvancedState'];
+        };
+      };
+      /** @description Invalid input */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Managed client, placement, or node does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description The requested lifecycle transition is not safe */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getPlacementDrift: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clientId: string;
+        placementId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Safe placement drift state */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PlacementDriftState'];
+        };
+      };
+      /** @description Invalid input */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Managed client, placement, or node does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description The requested lifecycle transition is not safe */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  acceptPlacementRemote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clientId: string;
+        placementId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Managed client after resolution */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ManagedClient'];
+        };
+      };
+      /** @description Invalid input */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Managed client, placement, or node does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description The requested lifecycle transition is not safe */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  reapplyPlacementDesired: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clientId: string;
+        placementId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Managed client after resolution */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ManagedClient'];
+        };
+      };
+      /** @description Invalid input */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Managed client, placement, or node does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description The requested lifecycle transition is not safe */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  recreateMissingPlacement: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clientId: string;
+        placementId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Managed client after resolution */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ManagedClient'];
         };
       };
       /** @description Invalid input */

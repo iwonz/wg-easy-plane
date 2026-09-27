@@ -3,6 +3,7 @@ import type {
   DiscoveredClient,
   ManagedClient,
   PlacementAdvancedState,
+  PlacementDriftState,
 } from '@wg-easy-plane/contracts';
 
 import { InventoryStore } from './inventory-store';
@@ -273,5 +274,100 @@ describe('InventoryStore', () => {
     );
     store.clearAdvanced();
     expect(store.advancedState).toBeNull();
+  });
+
+  it('adopts node-scoped selections and resolves safe placement drift', async () => {
+    const drifted = managed();
+    drifted.placements[0]!.status = 'drift';
+    const active = managed();
+    const placement = drifted.placements[0]!;
+    const values = {
+      name: drifted.name,
+      enabled: true,
+      expiresAt: null,
+      ipv4Address: '192.0.2.7',
+      ipv6Address: '2001:db8::7',
+      preUp: '',
+      postUp: '',
+      preDown: '',
+      postDown: '',
+      allowedIps: null,
+      serverAllowedIps: ['0.0.0.0/0', '::/0'],
+      firewallIps: null,
+      mtu: 1420,
+      jC: null,
+      jMin: null,
+      jMax: null,
+      i1: null,
+      i2: null,
+      i3: null,
+      i4: null,
+      i5: null,
+      persistentKeepalive: 25,
+      serverEndpoint: null,
+      dns: ['192.0.2.53'],
+    } satisfies PlacementDriftState['desired'];
+    const drift: PlacementDriftState = {
+      clientId: drifted.id,
+      placementId: placement.id,
+      nodeId: placement.nodeId,
+      nodeName: placement.nodeName,
+      nodeMode: 'wireguard',
+      status: 'drift',
+      snapshotAt: '2026-09-27T10:00:00.000Z',
+      desired: values,
+      remote: { ...values, mtu: 1380 },
+      differences: [{ field: 'mtu', desired: 1420, remote: 1380 }],
+    };
+    const emptyDiscovered = { items: [], page: { nextCursor: null } };
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json(drifted))
+      .mockResolvedValueOnce(Response.json(emptyDiscovered))
+      .mockResolvedValueOnce(Response.json(drift))
+      .mockResolvedValueOnce(Response.json(active))
+      .mockResolvedValueOnce(Response.json(emptyDiscovered));
+    const store = new InventoryStore(fetcher);
+    const adoption = {
+      name: drifted.name,
+      expiresAt: null,
+      enabled: true,
+      selections: [
+        { nodeId: placement.nodeId, remoteClientId: placement.remoteClientId! },
+      ],
+    };
+
+    await expect(store.adoptManaged(adoption)).resolves.toBe(true);
+    expect(store.managedItems).toEqual([drifted]);
+    await expect(store.loadDrift(drifted.id, placement.id)).resolves.toEqual(
+      drift,
+    );
+    expect(store.driftState?.differences).toEqual(drift.differences);
+    expect(JSON.stringify(store.driftState)).not.toMatch(
+      /publicKey|privateKey|configuration|qr/i,
+    );
+    await expect(store.reapplyDesired(drifted.id, placement.id)).resolves.toBe(
+      true,
+    );
+    expect(store.managedItems).toEqual([active]);
+    expect(store.driftState).toBeNull();
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1/clients/managed/adopt',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(adoption),
+      }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      3,
+      `/api/v1/clients/managed/${drifted.id}/placements/${placement.id}/drift`,
+      { credentials: 'same-origin' },
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      4,
+      `/api/v1/clients/managed/${drifted.id}/placements/${placement.id}/reapply-desired`,
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 });

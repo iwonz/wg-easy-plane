@@ -17,6 +17,7 @@ import {
 } from '@wg-easy-plane/wg-easy-adapter';
 
 import type { NodeInventoryFetchResult, NodeService } from './service';
+import { reconcileManagedPlacementsForNode } from './client-state';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -357,6 +358,7 @@ export class InventorySyncService {
           finishedAt,
         );
       }
+      reconcileManagedPlacementsForNode(this.connection, nodeId, finishedAt);
       this.connection.sqlite
         .prepare(
           `update nodes set last_synced_at = ?, updated_at = ? where id = ?`,

@@ -27,8 +27,13 @@ describe('generated API client artifacts', () => {
       '/api/v1/nodes/{nodeId}/sync',
       '/api/v1/clients/discovered',
       '/api/v1/clients/managed',
+      '/api/v1/clients/managed/adopt',
       '/api/v1/clients/managed/{clientId}',
       '/api/v1/clients/managed/{clientId}/placements/{placementId}/retry',
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/drift',
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/accept-remote',
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/reapply-desired',
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/recreate',
       '/api/v1/clients/managed/{clientId}/placements/{placementId}/link',
     ]) {
       expect(source).toContain(`'${path}'`);
@@ -93,6 +98,27 @@ describe('generated API client artifacts', () => {
     expect(properties).not.toHaveProperty('desiredPayload');
     expect(properties).not.toHaveProperty('host');
     expect(properties).not.toHaveProperty('password');
+    expect(properties).not.toHaveProperty('configuration');
+    expect(properties).not.toHaveProperty('qr');
+  });
+
+  it('limits drift responses to the pinned mutable contract', async () => {
+    const document = JSON.parse(
+      await readFile(path.resolve('packages/api-client/openapi.json'), 'utf8'),
+    ) as {
+      components: {
+        schemas: {
+          PlacementMutableState: { properties: Record<string, unknown> };
+        };
+      };
+    };
+    const properties =
+      document.components.schemas.PlacementMutableState.properties;
+
+    expect(properties).toHaveProperty('mtu');
+    expect(properties).toHaveProperty('serverEndpoint');
+    expect(properties).not.toHaveProperty('publicKey');
+    expect(properties).not.toHaveProperty('privateKey');
     expect(properties).not.toHaveProperty('configuration');
     expect(properties).not.toHaveProperty('qr');
   });

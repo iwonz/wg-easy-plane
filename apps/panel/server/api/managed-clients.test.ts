@@ -6,6 +6,7 @@ import { ApiTokenService, AuthService } from '@wg-easy-plane/auth';
 import type {
   ManagedClient,
   PlacementAdvancedState,
+  PlacementDriftState,
 } from '@wg-easy-plane/contracts';
 import { openDatabase } from '@wg-easy-plane/database';
 import type { DatabaseConnection } from '@wg-easy-plane/database';
@@ -92,6 +93,29 @@ function createFixture() {
       dns: ['192.0.2.53'],
     },
   };
+  const drift: PlacementDriftState = {
+    clientId: value.id,
+    placementId: value.placements[0]!.id,
+    nodeId: value.placements[0]!.nodeId,
+    nodeName: value.placements[0]!.nodeName,
+    nodeMode: 'wireguard',
+    status: 'drift',
+    snapshotAt: '2026-09-27T10:00:00.000Z',
+    desired: {
+      name: value.name,
+      enabled: true,
+      expiresAt: null,
+      ...advanced.values,
+    },
+    remote: {
+      name: value.name,
+      enabled: true,
+      expiresAt: null,
+      ...advanced.values,
+      mtu: 1380,
+    },
+    differences: [{ field: 'mtu', desired: 1420, remote: 1380 }],
+  };
   const managedClientService = {
     list: vi.fn(() => ({ items: [value], nextCursor: null })),
     get: vi.fn(() => value),
@@ -104,6 +128,11 @@ function createFixture() {
     retry: vi.fn(async () => ({ deleted: false, client: value })),
     getAdvanced: vi.fn(async () => advanced),
     updateAdvanced: vi.fn(async () => advanced),
+    adopt: vi.fn(() => value),
+    getDrift: vi.fn(async () => drift),
+    acceptRemote: vi.fn(() => value),
+    reapplyDesired: vi.fn(async () => value),
+    recreateMissing: vi.fn(async () => value),
     listAmbiguousCandidates: vi.fn(() => []),
     linkCandidate: vi.fn(async () => value),
     cancelAmbiguous: vi.fn(() => ({ deleted: false, client: value })),
@@ -251,5 +280,100 @@ describe('managed client routes', () => {
     expect(fixture.managedClientService.updateAdvanced).toHaveBeenCalledTimes(
       1,
     );
+  });
+
+  it('scopes explicit adoption and drift resolution without exposing unsafe state', async () => {
+    const fixture = createFixture();
+    const reader = fixture.apiTokenService.create({
+      name: 'Synthetic drift reader',
+      scopes: ['clients:read'],
+    });
+    const writer = fixture.apiTokenService.create({
+      name: 'Synthetic drift writer',
+      scopes: ['clients:write'],
+    });
+    const client = managedClient();
+    const placement = client.placements[0]!;
+    const driftUrl = `/api/v1/clients/managed/${client.id}/placements/${placement.id}/drift`;
+
+    const read = await fixture.api.request(driftUrl, {
+      headers: { Authorization: `Bearer ${reader.token}` },
+    });
+    expect(read.status).toBe(200);
+    expect(read.headers.get('cache-control')).toBe('private, no-store');
+    const drift = (await read.json()) as PlacementDriftState;
+    expect(drift.differences).toEqual([
+      { field: 'mtu', desired: 1420, remote: 1380 },
+    ]);
+    expect(JSON.stringify(drift)).not.toMatch(
+      /publicKey|privateKey|configuration|qr/i,
+    );
+
+    const adoption = {
+      name: 'Adopted synthetic client',
+      expiresAt: null,
+      enabled: true,
+      selections: [
+        { nodeId: placement.nodeId, remoteClientId: placement.remoteClientId },
+      ],
+    };
+    const denied = await fixture.api.request('/api/v1/clients/managed/adopt', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${reader.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(adoption),
+    });
+    expect(denied.status).toBe(403);
+
+    const adopted = await fixture.api.request('/api/v1/clients/managed/adopt', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${writer.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(adoption),
+    });
+    expect(adopted.status).toBe(201);
+    expect(fixture.managedClientService.adopt).toHaveBeenCalledWith(adoption);
+
+    for (const action of ['accept-remote', 'reapply-desired', 'recreate']) {
+      const response = await fixture.api.request(
+        `/api/v1/clients/managed/${client.id}/placements/${placement.id}/${action}`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${writer.token}` },
+        },
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe('private, no-store');
+    }
+    expect(fixture.managedClientService.acceptRemote).toHaveBeenCalledWith(
+      client.id,
+      placement.id,
+    );
+    expect(fixture.managedClientService.reapplyDesired).toHaveBeenCalledWith(
+      client.id,
+      placement.id,
+    );
+    expect(fixture.managedClientService.recreateMissing).toHaveBeenCalledWith(
+      client.id,
+      placement.id,
+    );
+
+    const invalid = await fixture.api.request('/api/v1/clients/managed/adopt', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${writer.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...adoption,
+        selections: [adoption.selections[0], adoption.selections[0]],
+      }),
+    });
+    expect(invalid.status).toBe(400);
+    expect(fixture.managedClientService.adopt).toHaveBeenCalledTimes(1);
   });
 });

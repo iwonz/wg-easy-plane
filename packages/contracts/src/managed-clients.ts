@@ -188,6 +188,113 @@ export const PlacementAdvancedStateSchema = z
   .strict()
   .openapi('PlacementAdvancedState');
 
+export const PLACEMENT_MUTABLE_FIELDS = [
+  'name',
+  'enabled',
+  'expiresAt',
+  'ipv4Address',
+  'ipv6Address',
+  'preUp',
+  'postUp',
+  'preDown',
+  'postDown',
+  'allowedIps',
+  'serverAllowedIps',
+  'firewallIps',
+  'mtu',
+  'jC',
+  'jMin',
+  'jMax',
+  'i1',
+  'i2',
+  'i3',
+  'i4',
+  'i5',
+  'persistentKeepalive',
+  'serverEndpoint',
+  'dns',
+] as const;
+
+export const PlacementMutableStateSchema = z
+  .object({
+    name: z.string().min(1),
+    enabled: z.boolean(),
+    expiresAt: z.iso.datetime().nullable(),
+    ...PlacementAdvancedValuesSchema.shape,
+  })
+  .strict()
+  .openapi('PlacementMutableState');
+
+export const PlacementMutableFieldSchema = z
+  .enum(PLACEMENT_MUTABLE_FIELDS)
+  .openapi('PlacementMutableField');
+
+const DriftValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+  z.array(z.string()),
+]);
+
+export const PlacementDriftDifferenceSchema = z
+  .object({
+    field: PlacementMutableFieldSchema,
+    desired: DriftValueSchema,
+    remote: DriftValueSchema,
+  })
+  .strict()
+  .openapi('PlacementDriftDifference');
+
+export const PlacementDriftStateSchema = z
+  .object({
+    clientId: z.uuid(),
+    placementId: z.uuid(),
+    nodeId: z.uuid(),
+    nodeName: z.string().min(1),
+    nodeMode: NodeModeSchema,
+    status: PlacementStatusSchema,
+    snapshotAt: z.iso.datetime().nullable(),
+    desired: PlacementMutableStateSchema,
+    remote: PlacementMutableStateSchema.nullable(),
+    differences: z.array(PlacementDriftDifferenceSchema),
+  })
+  .strict()
+  .openapi('PlacementDriftState');
+
+const AdoptionSelectionSchema = z
+  .object({
+    nodeId: z.uuid(),
+    remoteClientId: z.number().int().positive(),
+  })
+  .strict();
+
+export const AdoptManagedClientRequestSchema = z
+  .object({
+    name: z.string().trim().min(1).max(255),
+    expiresAt: z.iso.datetime().nullable().optional(),
+    enabled: z.boolean().default(true),
+    selections: z
+      .array(AdoptionSelectionSchema)
+      .min(1)
+      .max(100)
+      .superRefine((selections, context) => {
+        const nodes = new Set<string>();
+        for (const [index, selection] of selections.entries()) {
+          if (nodes.has(selection.nodeId)) {
+            context.addIssue({
+              code: 'custom',
+              path: [index, 'nodeId'],
+              message: 'Only one remote client may be selected per node',
+            });
+          }
+          nodes.add(selection.nodeId);
+        }
+      }),
+  })
+  .strict()
+  .openapi('AdoptManagedClientRequest');
+
 export type ManagedClient = z.infer<typeof ManagedClientSchema>;
 export type ManagedPlacement = z.infer<typeof ManagedPlacementSchema>;
 export type ManagedClientMutationResult = z.infer<
@@ -208,6 +315,12 @@ export type PlacementAdvancedValues = z.infer<
 >;
 export type PlacementAdvancedState = z.infer<
   typeof PlacementAdvancedStateSchema
+>;
+export type PlacementMutableState = z.infer<typeof PlacementMutableStateSchema>;
+export type PlacementMutableField = z.infer<typeof PlacementMutableFieldSchema>;
+export type PlacementDriftState = z.infer<typeof PlacementDriftStateSchema>;
+export type AdoptManagedClientRequest = z.infer<
+  typeof AdoptManagedClientRequestSchema
 >;
 
 const jsonResponse = <T extends z.ZodType>(schema: T, description: string) => ({
@@ -265,6 +378,26 @@ export const createManagedClientRoute = createRoute({
       ManagedClientSchema,
       'Created managed client with per-node results',
     ),
+    ...commonErrors,
+  },
+});
+
+export const adoptManagedClientRoute = createRoute({
+  method: 'post',
+  path: '/v1/clients/managed/adopt',
+  operationId: 'adoptManagedClient',
+  tags: ['Clients'],
+  summary: 'Adopt explicit unlinked remote clients without mutating upstream',
+  security,
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: AdoptManagedClientRequestSchema },
+      },
+    },
+  },
+  responses: {
+    201: jsonResponse(ManagedClientSchema, 'Adopted managed client'),
     ...commonErrors,
   },
 });
@@ -450,6 +583,57 @@ export const updatePlacementAdvancedRoute = createRoute({
     ...commonErrors,
   },
 });
+
+export const getPlacementDriftRoute = createRoute({
+  method: 'get',
+  path: '/v1/clients/managed/{clientId}/placements/{placementId}/drift',
+  operationId: 'getPlacementDrift',
+  tags: ['Clients'],
+  summary: 'Inspect safe desired and remote placement differences',
+  security,
+  request: { params: placementParams },
+  responses: {
+    200: jsonResponse(PlacementDriftStateSchema, 'Safe placement drift state'),
+    ...commonErrors,
+  },
+});
+
+const placementResolutionRoute = (
+  path: string,
+  operationId: string,
+  summary: string,
+) =>
+  createRoute({
+    method: 'post',
+    path,
+    operationId,
+    tags: ['Clients'],
+    summary,
+    security,
+    request: { params: placementParams },
+    responses: {
+      200: jsonResponse(ManagedClientSchema, 'Managed client after resolution'),
+      ...commonErrors,
+    },
+  });
+
+export const acceptPlacementRemoteRoute = placementResolutionRoute(
+  '/v1/clients/managed/{clientId}/placements/{placementId}/accept-remote',
+  'acceptPlacementRemote',
+  'Accept current remote state as desired',
+);
+
+export const reapplyPlacementDesiredRoute = placementResolutionRoute(
+  '/v1/clients/managed/{clientId}/placements/{placementId}/reapply-desired',
+  'reapplyPlacementDesired',
+  'Reapply durable desired state to one placement',
+);
+
+export const recreateMissingPlacementRoute = placementResolutionRoute(
+  '/v1/clients/managed/{clientId}/placements/{placementId}/recreate',
+  'recreateMissingPlacement',
+  'Create a fresh remote client for a missing placement',
+);
 
 export const listAmbiguousCandidatesRoute = createRoute({
   method: 'get',

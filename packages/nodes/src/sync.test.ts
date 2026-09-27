@@ -9,6 +9,7 @@ import { migrateDatabase } from '@wg-easy-plane/database/migrations';
 import type { WgEasyClient } from '@wg-easy-plane/wg-easy-adapter';
 
 import type { NodeInventoryFetchResult } from './service';
+import { actualPayloadFromSnapshot } from './client-state';
 import {
   InventorySyncError,
   InventorySyncScheduler,
@@ -283,6 +284,109 @@ describe('InventorySyncService', () => {
         )
         .get(id),
     ).toEqual({ count: 1 });
+  });
+
+  it('classifies linked placements only after a complete successful sync', async () => {
+    const connection = createConnection();
+    const id = insertNode(connection, 1);
+    let now = START + 1_000;
+    const original = client(16, 'Managed synthetic');
+    let outcome: NodeInventoryFetchResult = success(id, [original]);
+    let sequence = 0;
+    const service = new InventorySyncService(
+      connection,
+      { fetchInventory: async () => outcome },
+      {
+        now: () => new Date(now),
+        newId: () =>
+          `24000000-0000-4000-8000-${String(++sequence).padStart(12, '0')}`,
+      },
+    );
+    await service.syncNode(id);
+    const managedId = '25000000-0000-4000-8000-000000000001';
+    const placementId = '25000000-0000-4000-8000-000000000002';
+    connection.sqlite
+      .prepare(
+        `insert into managed_clients
+         (id, name, expires_at, enabled, lifecycle_status, created_at, updated_at)
+         values (?, ?, ?, 1, 'active', ?, ?)`,
+      )
+      .run(
+        managedId,
+        original.name,
+        Date.parse(original.expiresAt!),
+        START,
+        START,
+      );
+    const desired = JSON.stringify({
+      kind: 'complete',
+      payload: actualPayloadFromSnapshot(original),
+    });
+    connection.sqlite
+      .prepare(
+        `insert into placements
+         (id, managed_client_id, node_id, remote_client_id, desired_payload,
+          status, last_error_code, last_attempt_at, created_at, updated_at)
+         values (?, ?, ?, ?, ?, 'error', 'UPSTREAM_ERROR', null, ?, ?)`,
+      )
+      .run(placementId, managedId, id, original.id, desired, START, START);
+
+    now += 1_000;
+    await service.syncNode(id);
+    expect(
+      connection.sqlite
+        .prepare(
+          'select status, last_error_code, desired_payload from placements where id = ?',
+        )
+        .get(placementId),
+    ).toEqual({
+      status: 'active',
+      last_error_code: null,
+      desired_payload: desired,
+    });
+
+    outcome = success(id, [{ ...original, mtu: 1300 }]);
+    now += 1_000;
+    await service.syncNode(id);
+    expect(
+      connection.sqlite
+        .prepare(
+          'select status, last_error_code, desired_payload from placements where id = ?',
+        )
+        .get(placementId),
+    ).toEqual({
+      status: 'drift',
+      last_error_code: null,
+      desired_payload: desired,
+    });
+
+    outcome = {
+      ok: false,
+      node: { ...nodeMetadata(id), status: 'unreachable' },
+      errorCode: 'TIMEOUT',
+    };
+    now += 1_000;
+    await service.syncNode(id);
+    expect(
+      connection.sqlite
+        .prepare('select status, desired_payload from placements where id = ?')
+        .get(placementId),
+    ).toEqual({ status: 'drift', desired_payload: desired });
+
+    outcome = success(id, []);
+    now += 1_000;
+    await service.syncNode(id);
+    expect(
+      connection.sqlite
+        .prepare(
+          'select status, last_error_code, desired_payload from placements where id = ?',
+        )
+        .get(placementId),
+    ).toEqual({
+      status: 'missing',
+      last_error_code: 'SNAPSHOT_MISSING',
+      desired_payload: desired,
+    });
   });
 
   it('removes explicitly linked placements from the discovered inventory', async () => {

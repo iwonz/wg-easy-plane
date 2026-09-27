@@ -1,5 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import type {
+  AdoptManagedClientRequest,
   AmbiguousCreateCandidate,
   DiscoveredClient,
   ManagedClient,
@@ -7,6 +8,7 @@ import type {
   NodeMetadata,
   PlacementAdvancedState,
   PlacementAdvancedValues,
+  PlacementDriftState,
 } from '@wg-easy-plane/contracts';
 
 type Fetcher = typeof globalThis.fetch;
@@ -40,6 +42,9 @@ export class InventoryStore {
   advancedState: PlacementAdvancedState | null = null;
   advancedLoading = false;
   advancedFailure = false;
+  driftState: PlacementDriftState | null = null;
+  driftLoading = false;
+  driftFailure = false;
 
   constructor(
     private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
@@ -143,6 +148,10 @@ export class InventoryStore {
     nodeIds: string[];
   }): Promise<boolean> {
     return this.#mutate('/api/v1/clients/managed', 'POST', input);
+  }
+
+  async adoptManaged(input: AdoptManagedClientRequest): Promise<boolean> {
+    return this.#mutate('/api/v1/clients/managed/adopt', 'POST', input);
   }
 
   async updateManaged(
@@ -330,6 +339,74 @@ export class InventoryStore {
     this.advancedFailure = false;
   }
 
+  async loadDrift(
+    clientId: string,
+    placementId: string,
+  ): Promise<PlacementDriftState | null> {
+    this.driftLoading = true;
+    this.driftFailure = false;
+    try {
+      const response = await this.fetcher(
+        `/api/v1/clients/managed/${clientId}/placements/${placementId}/drift`,
+        { credentials: 'same-origin' },
+      );
+      if (!response.ok) throw new Error('Unable to load placement drift');
+      const state = (await response.json()) as PlacementDriftState;
+      runInAction(() => {
+        this.driftState = state;
+      });
+      return state;
+    } catch {
+      runInAction(() => {
+        this.driftFailure = true;
+        this.driftState = null;
+      });
+      return null;
+    } finally {
+      runInAction(() => {
+        this.driftLoading = false;
+      });
+    }
+  }
+
+  async acceptRemote(clientId: string, placementId: string): Promise<boolean> {
+    const success = await this.#mutate(
+      `/api/v1/clients/managed/${clientId}/placements/${placementId}/accept-remote`,
+      'POST',
+    );
+    if (success) this.clearDrift();
+    return success;
+  }
+
+  async reapplyDesired(
+    clientId: string,
+    placementId: string,
+  ): Promise<boolean> {
+    const success = await this.#mutate(
+      `/api/v1/clients/managed/${clientId}/placements/${placementId}/reapply-desired`,
+      'POST',
+    );
+    if (success) this.clearDrift();
+    return success;
+  }
+
+  async recreateMissing(
+    clientId: string,
+    placementId: string,
+  ): Promise<boolean> {
+    const success = await this.#mutate(
+      `/api/v1/clients/managed/${clientId}/placements/${placementId}/recreate`,
+      'POST',
+    );
+    if (success) this.clearDrift();
+    return success;
+  }
+
+  clearDrift(): void {
+    this.driftState = null;
+    this.driftFailure = false;
+  }
+
   async #mutate(
     url: string,
     method: 'POST' | 'PATCH' | 'DELETE',
@@ -387,5 +464,6 @@ export class InventoryStore {
     this.failure = false;
     this.managedFailure = false;
     this.advancedFailure = false;
+    this.driftFailure = false;
   }
 }

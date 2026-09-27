@@ -4,6 +4,7 @@ import {
   Alert,
   Badge,
   Button,
+  Checkbox,
   Group,
   Loader,
   Modal,
@@ -19,6 +20,7 @@ import {
 } from '@mantine/core';
 import type {
   AmbiguousCreateCandidate,
+  DiscoveredClient,
   ManagedClient,
   ManagedPlacement,
 } from '@wg-easy-plane/contracts';
@@ -28,6 +30,7 @@ import { useEffect, useState } from 'react';
 
 import { InventoryStore } from '../stores/inventory-store';
 import { AdvancedPlacementEditor } from './advanced-placement-editor';
+import { DriftResolutionDialog } from './drift-resolution-dialog';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -59,6 +62,17 @@ export const ClientInventory = observer(function ClientInventory() {
     clientId: string;
     placement: ManagedPlacement;
   } | null>(null);
+  const [driftTarget, setDriftTarget] = useState<{
+    clientId: string;
+    placement: ManagedPlacement;
+  } | null>(null);
+  const [adoptOpened, setAdoptOpened] = useState(false);
+  const [adoptionSelections, setAdoptionSelections] = useState<
+    DiscoveredClient[]
+  >([]);
+  const [adoptionName, setAdoptionName] = useState('');
+  const [adoptionExpiresAt, setAdoptionExpiresAt] = useState('');
+  const [adoptionEnabled, setAdoptionEnabled] = useState(true);
 
   useEffect(() => {
     void store.loadAll();
@@ -115,6 +129,37 @@ export const ClientInventory = observer(function ClientInventory() {
       setCandidates([]);
     } finally {
       setCandidatesLoading(false);
+    }
+  };
+
+  const toggleAdoption = (candidate: DiscoveredClient, checked: boolean) => {
+    setAdoptionSelections((current) => {
+      const withoutNode = current.filter(
+        (selection) => selection.nodeId !== candidate.nodeId,
+      );
+      return checked ? [...withoutNode, candidate] : withoutNode;
+    });
+    if (checked && !adoptionName) setAdoptionName(candidate.publicData.name);
+  };
+
+  const submitAdoption = async () => {
+    const success = await store.adoptManaged({
+      name: adoptionName,
+      expiresAt: adoptionExpiresAt
+        ? new Date(adoptionExpiresAt).toISOString()
+        : null,
+      enabled: adoptionEnabled,
+      selections: adoptionSelections.map((selection) => ({
+        nodeId: selection.nodeId,
+        remoteClientId: selection.remoteClientId,
+      })),
+    });
+    if (success) {
+      setAdoptOpened(false);
+      setAdoptionSelections([]);
+      setAdoptionName('');
+      setAdoptionExpiresAt('');
+      setAdoptionEnabled(true);
     }
   };
 
@@ -304,6 +349,20 @@ export const ClientInventory = observer(function ClientInventory() {
                                       >
                                         {t('resolve')}
                                       </Button>
+                                    ) : placement.status === 'drift' ||
+                                      placement.status === 'missing' ? (
+                                      <Button
+                                        size="xs"
+                                        variant="light"
+                                        onClick={() =>
+                                          setDriftTarget({
+                                            clientId: client.id,
+                                            placement,
+                                          })
+                                        }
+                                      >
+                                        {t('drift.inspect')}
+                                      </Button>
                                     ) : placement.status !== 'active' ? (
                                       <Button
                                         size="xs"
@@ -360,6 +419,18 @@ export const ClientInventory = observer(function ClientInventory() {
           </Tabs.Panel>
 
           <Tabs.Panel pt="md" value="discovered">
+            <Group justify="flex-end" mb="md">
+              <Button
+                variant="light"
+                onClick={() => setAdoptOpened(true)}
+                disabled={
+                  store.items.filter((item) => item.missingAt === null)
+                    .length === 0
+                }
+              >
+                {t('adoption.open')}
+              </Button>
+            </Group>
             {store.loading && store.items.length === 0 ? (
               <Group justify="center">
                 <Loader aria-label={t('loading')} />
@@ -646,6 +717,82 @@ export const ClientInventory = observer(function ClientInventory() {
         store={store}
         target={advancedTarget}
         onClose={() => setAdvancedTarget(null)}
+      />
+
+      <Modal
+        opened={adoptOpened}
+        onClose={() => setAdoptOpened(false)}
+        title={t('adoption.title')}
+        size="lg"
+      >
+        <Stack>
+          <Text c="dimmed" size="sm">
+            {t('adoption.description')}
+          </Text>
+          <TextInput
+            label={t('fields.name')}
+            value={adoptionName}
+            onChange={(event) => setAdoptionName(event.currentTarget.value)}
+            required
+          />
+          <TextInput
+            label={t('fields.expiration')}
+            type="datetime-local"
+            value={adoptionExpiresAt}
+            onChange={(event) =>
+              setAdoptionExpiresAt(event.currentTarget.value)
+            }
+          />
+          <Checkbox
+            label={t('adoption.enabled')}
+            checked={adoptionEnabled}
+            onChange={(event) =>
+              setAdoptionEnabled(event.currentTarget.checked)
+            }
+          />
+          <Stack gap="xs">
+            {store.items
+              .filter((item) => item.missingAt === null)
+              .map((item) => {
+                const checked = adoptionSelections.some(
+                  (selection) =>
+                    selection.nodeId === item.nodeId &&
+                    selection.remoteClientId === item.remoteClientId,
+                );
+                return (
+                  <Checkbox
+                    key={`${item.nodeId}:${item.remoteClientId}`}
+                    checked={checked}
+                    onChange={(event) =>
+                      toggleAdoption(item, event.currentTarget.checked)
+                    }
+                    label={`${item.nodeName} · ${item.publicData.name} · #${item.remoteClientId}`}
+                  />
+                );
+              })}
+          </Stack>
+          <Text c="dimmed" size="xs">
+            {t('adoption.selected', { count: adoptionSelections.length })}
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setAdoptOpened(false)}>
+              {t('cancel')}
+            </Button>
+            <Button
+              loading={store.mutating}
+              disabled={!adoptionName.trim() || adoptionSelections.length === 0}
+              onClick={() => void submitAdoption()}
+            >
+              {t('adoption.submit')}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <DriftResolutionDialog
+        store={store}
+        target={driftTarget}
+        onClose={() => setDriftTarget(null)}
       />
     </Paper>
   );

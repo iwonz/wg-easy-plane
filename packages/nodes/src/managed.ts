@@ -1,15 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import {
+  AdoptManagedClientRequestSchema,
   CreateManagedClientRequestSchema,
   ManagedClientSchema,
   PlacementAdvancedStateSchema,
   PlacementAdvancedValuesSchema,
+  PlacementDriftStateSchema,
   UpdateManagedClientRequestSchema,
+  type AdoptManagedClientRequest,
   type AmbiguousCreateCandidate,
   type CreateManagedClientRequest,
   type ManagedClient,
   type PlacementAdvancedState,
   type PlacementAdvancedValues,
+  type PlacementDriftState,
   type PlacementStatus,
   type UpdateManagedClientRequest,
 } from '@wg-easy-plane/contracts';
@@ -17,10 +21,20 @@ import type { DatabaseConnection } from '@wg-easy-plane/database';
 import {
   WgEasyClientSchema,
   WgEasyClientUpdateRequestSchema,
-  type WgEasyClient,
   type WgEasyClientUpdateRequest,
 } from '@wg-easy-plane/wg-easy-adapter';
 
+import {
+  actualPayloadFromSnapshot,
+  desiredPayloadFromSnapshot,
+  driftDifferences,
+  mutableState,
+  parsePlacementDesired,
+  reconcileManagedPlacementsForNode,
+  sharedDesired,
+  type ManagedSharedState,
+  type PlacementDesiredState,
+} from './client-state';
 import type { InventorySyncService } from './sync';
 import {
   NodeMutationError,
@@ -56,12 +70,22 @@ type PlacementRow = {
   updated_at: number;
 };
 
+type RemoteSnapshotRow = {
+  public_data: string;
+  last_seen_at: number;
+  missing_at: number | null;
+};
+
+type AdoptionCandidateRow = RemoteSnapshotRow & {
+  node_name: string;
+  node_mode: string | null;
+  node_status: string;
+  detected_version: string | null;
+  placement_id: string | null;
+};
+
 type ManagedCursor = { createdAt: number; id: string };
 type AttemptOperation = 'create' | 'update' | 'enable' | 'disable' | 'delete';
-type DesiredState =
-  | { kind: 'shared'; name: string; expiresAt: string | null; enabled: boolean }
-  | { kind: 'complete'; payload: WgEasyClientUpdateRequest };
-
 type RemoteGateway = Pick<
   NodeService,
   | 'createRemoteClient'
@@ -121,9 +145,8 @@ function decodeCursor(value: string): ManagedCursor {
   }
 }
 
-function desiredShared(row: ManagedClientRow): DesiredState {
+function sharedFromRow(row: ManagedClientRow): ManagedSharedState {
   return {
-    kind: 'shared',
     name: row.name,
     expiresAt:
       row.expires_at === null ? null : new Date(row.expires_at).toISOString(),
@@ -131,39 +154,8 @@ function desiredShared(row: ManagedClientRow): DesiredState {
   };
 }
 
-function updatePayload(
-  client: WgEasyClient,
-  owner: ManagedClientRow,
-): WgEasyClientUpdateRequest {
-  return WgEasyClientUpdateRequestSchema.parse({
-    name: owner.name,
-    enabled: owner.enabled === 1,
-    expiresAt:
-      owner.expires_at === null
-        ? null
-        : new Date(owner.expires_at).toISOString(),
-    ipv4Address: client.ipv4Address,
-    ipv6Address: client.ipv6Address,
-    preUp: client.preUp,
-    postUp: client.postUp,
-    preDown: client.preDown,
-    postDown: client.postDown,
-    allowedIps: client.allowedIps,
-    serverAllowedIps: client.serverAllowedIps,
-    firewallIps: client.firewallIps,
-    mtu: client.mtu,
-    jC: client.jC,
-    jMin: client.jMin,
-    jMax: client.jMax,
-    i1: client.i1,
-    i2: client.i2,
-    i3: client.i3,
-    i4: client.i4,
-    i5: client.i5,
-    persistentKeepalive: client.persistentKeepalive,
-    serverEndpoint: client.serverEndpoint,
-    dns: client.dns,
-  });
+function desiredShared(row: ManagedClientRow): PlacementDesiredState {
+  return sharedDesired(sharedFromRow(row));
 }
 
 function advancedValues(
@@ -306,6 +298,98 @@ export class ManagedClientService {
     for (const placementId of placementIds)
       await this.#createPlacement(placementId);
     return this.get(id);
+  }
+
+  adopt(input: AdoptManagedClientRequest): ManagedClient {
+    const parsed = AdoptManagedClientRequestSchema.safeParse(input);
+    if (!parsed.success) throw new ManagedClientServiceError('INVALID_INPUT');
+    const candidates = parsed.data.selections.map((selection) => {
+      const row = this.connection.sqlite
+        .prepare(
+          `select r.public_data, r.last_seen_at, r.missing_at,
+                  n.name as node_name, n.mode as node_mode,
+                  n.status as node_status, n.detected_version,
+                  p.id as placement_id
+           from remote_clients r
+           join nodes n on n.id = r.node_id
+           left join placements p
+             on p.node_id = r.node_id and p.remote_client_id = r.remote_client_id
+           where r.node_id = ? and r.remote_client_id = ?`,
+        )
+        .get(selection.nodeId, selection.remoteClientId) as
+        AdoptionCandidateRow | undefined;
+      if (!row) throw new ManagedClientServiceError('NOT_FOUND');
+      if (
+        row.missing_at !== null ||
+        row.placement_id !== null ||
+        row.node_status !== 'healthy' ||
+        row.detected_version !== '15.4.0' ||
+        (row.node_mode !== 'wireguard' && row.node_mode !== 'amnezia')
+      ) {
+        throw new ManagedClientServiceError('CONFLICT');
+      }
+      return {
+        selection,
+        row,
+        client: WgEasyClientSchema.parse(JSON.parse(row.public_data)),
+      };
+    });
+    const clientId = this.newId();
+    const now = this.now().getTime();
+    const expiresAt = parsed.data.expiresAt
+      ? new Date(parsed.data.expiresAt).getTime()
+      : null;
+    const adopt = this.connection.sqlite.transaction(() => {
+      this.connection.sqlite
+        .prepare(
+          `insert into managed_clients
+           (id, name, expires_at, enabled, lifecycle_status, created_at, updated_at)
+           values (?, ?, ?, ?, 'active', ?, ?)`,
+        )
+        .run(
+          clientId,
+          parsed.data.name,
+          expiresAt,
+          parsed.data.enabled ? 1 : 0,
+          now,
+          now,
+        );
+      const owner = this.#requireClient(clientId);
+      for (const candidate of candidates) {
+        const desired = desiredPayloadFromSnapshot(
+          candidate.client,
+          sharedFromRow(owner),
+        );
+        const remote = actualPayloadFromSnapshot(candidate.client);
+        const status =
+          driftDifferences(desired, remote).length === 0 ? 'active' : 'drift';
+        this.connection.sqlite
+          .prepare(
+            `insert into placements
+             (id, managed_client_id, node_id, remote_client_id, desired_payload,
+              status, last_error_code, last_attempt_at, created_at, updated_at)
+             values (?, ?, ?, ?, ?, ?, null, null, ?, ?)`,
+          )
+          .run(
+            this.newId(),
+            clientId,
+            candidate.selection.nodeId,
+            candidate.selection.remoteClientId,
+            JSON.stringify({ kind: 'complete', payload: desired }),
+            status,
+            now,
+            now,
+          );
+      }
+    });
+    try {
+      adopt();
+    } catch (error) {
+      if (isConstraintFailure(error))
+        throw new ManagedClientServiceError('CONFLICT');
+      throw error;
+    }
+    return this.get(clientId);
   }
 
   async update(
@@ -550,6 +634,128 @@ export class ManagedClientService {
     if (desired.kind !== 'complete')
       throw new ManagedClientServiceError('CONFLICT');
     return this.#advancedState(clientId, current, desired.payload);
+  }
+
+  async getDrift(
+    clientId: string,
+    placementId: string,
+  ): Promise<PlacementDriftState> {
+    this.#requireActiveClient(clientId);
+    let placement = this.#requirePlacement(clientId, placementId);
+    if (
+      placement.remote_client_id === null ||
+      placement.status === 'ambiguous' ||
+      placement.status === 'deleting'
+    ) {
+      throw new ManagedClientServiceError('CONFLICT');
+    }
+    let desired = this.#parseDesired(placement.desired_payload);
+    if (desired.kind !== 'complete') {
+      const payload = await this.#ensureCompletePayload(placement);
+      if (!payload) throw new ManagedClientServiceError('CONFLICT');
+      desired = { kind: 'complete', payload };
+      placement = this.#requirePlacement(clientId, placementId);
+    }
+    return this.#driftState(clientId, placement, desired.payload);
+  }
+
+  acceptRemote(clientId: string, placementId: string): ManagedClient {
+    this.#requireActiveClient(clientId);
+    const placement = this.#requirePlacement(clientId, placementId);
+    if (
+      placement.remote_client_id === null ||
+      placement.status === 'ambiguous' ||
+      placement.status === 'deleting'
+    ) {
+      throw new ManagedClientServiceError('CONFLICT');
+    }
+    const snapshot = this.#remoteSnapshot(
+      placement.node_id,
+      placement.remote_client_id,
+    );
+    if (!snapshot || snapshot.missing_at !== null)
+      throw new ManagedClientServiceError('CONFLICT');
+    const accepted = actualPayloadFromSnapshot(
+      WgEasyClientSchema.parse(JSON.parse(snapshot.public_data)),
+    );
+    const expiresAt = accepted.expiresAt
+      ? new Date(accepted.expiresAt).getTime()
+      : null;
+    const now = this.now().getTime();
+    const resolve = this.connection.sqlite.transaction(() => {
+      this.connection.sqlite
+        .prepare(
+          `update managed_clients set name = ?, expires_at = ?, enabled = ?,
+             updated_at = ? where id = ?`,
+        )
+        .run(accepted.name, expiresAt, accepted.enabled ? 1 : 0, now, clientId);
+      const shared: ManagedSharedState = {
+        name: accepted.name,
+        expiresAt: accepted.expiresAt,
+        enabled: accepted.enabled,
+      };
+      const rows = this.#placementRows(clientId);
+      for (const row of rows) {
+        const current = this.#parseDesired(row.desired_payload);
+        const next: PlacementDesiredState =
+          row.id === placementId
+            ? { kind: 'complete', payload: accepted }
+            : current.kind === 'complete'
+              ? {
+                  kind: 'complete',
+                  payload: { ...current.payload, ...shared },
+                }
+              : sharedDesired(shared);
+        this.connection.sqlite
+          .prepare(
+            'update placements set desired_payload = ?, updated_at = ? where id = ?',
+          )
+          .run(JSON.stringify(next), now, row.id);
+      }
+      for (const nodeId of new Set(rows.map((row) => row.node_id))) {
+        reconcileManagedPlacementsForNode(this.connection, nodeId, now);
+      }
+    });
+    resolve();
+    return this.get(clientId);
+  }
+
+  async reapplyDesired(
+    clientId: string,
+    placementId: string,
+  ): Promise<ManagedClient> {
+    this.#requireActiveClient(clientId);
+    const placement = this.#requirePlacement(clientId, placementId);
+    if (
+      placement.remote_client_id === null ||
+      placement.status === 'ambiguous' ||
+      placement.status === 'deleting' ||
+      placement.status === 'missing'
+    ) {
+      throw new ManagedClientServiceError('CONFLICT');
+    }
+    await this.#applyCompleteUpdate(placementId);
+    return this.get(clientId);
+  }
+
+  async recreateMissing(
+    clientId: string,
+    placementId: string,
+  ): Promise<ManagedClient> {
+    const owner = this.#requireActiveClient(clientId);
+    const placement = this.#requirePlacement(clientId, placementId);
+    if (placement.status !== 'missing' || placement.remote_client_id === null) {
+      throw new ManagedClientServiceError('CONFLICT');
+    }
+    const now = this.now().getTime();
+    this.connection.sqlite
+      .prepare(
+        `update placements set remote_client_id = null, desired_payload = ?,
+           status = 'pending', last_error_code = null, updated_at = ? where id = ?`,
+      )
+      .run(JSON.stringify(desiredShared(owner)), now, placementId);
+    await this.#createPlacement(placementId);
+    return this.get(clientId);
   }
 
   listAmbiguousCandidates(
@@ -825,6 +1031,59 @@ export class ManagedClientService {
     });
   }
 
+  #driftState(
+    clientId: string,
+    placement: PlacementRow,
+    desiredPayload: WgEasyClientUpdateRequest,
+  ): PlacementDriftState {
+    if (
+      placement.node_mode !== 'wireguard' &&
+      placement.node_mode !== 'amnezia'
+    ) {
+      throw new ManagedClientServiceError('CONFLICT');
+    }
+    const snapshot =
+      placement.remote_client_id === null
+        ? null
+        : this.#remoteSnapshot(placement.node_id, placement.remote_client_id);
+    const remotePayload =
+      snapshot && snapshot.missing_at === null
+        ? actualPayloadFromSnapshot(
+            WgEasyClientSchema.parse(JSON.parse(snapshot.public_data)),
+          )
+        : null;
+    return PlacementDriftStateSchema.parse({
+      clientId,
+      placementId: placement.id,
+      nodeId: placement.node_id,
+      nodeName: placement.node_name,
+      nodeMode: placement.node_mode,
+      status: placement.status,
+      snapshotAt: snapshot
+        ? new Date(snapshot.last_seen_at).toISOString()
+        : null,
+      desired: mutableState(desiredPayload),
+      remote: remotePayload ? mutableState(remotePayload) : null,
+      differences: remotePayload
+        ? driftDifferences(desiredPayload, remotePayload)
+        : [],
+    });
+  }
+
+  #remoteSnapshot(
+    nodeId: string,
+    remoteClientId: number,
+  ): RemoteSnapshotRow | null {
+    return (
+      (this.connection.sqlite
+        .prepare(
+          `select public_data, last_seen_at, missing_at from remote_clients
+           where node_id = ? and remote_client_id = ?`,
+        )
+        .get(nodeId, remoteClientId) as RemoteSnapshotRow | undefined) ?? null
+    );
+  }
+
   #payloadFromSnapshot(
     nodeId: string,
     remoteClientId: number,
@@ -837,9 +1096,9 @@ export class ManagedClientService {
       )
       .get(nodeId, remoteClientId) as { public_data: string } | undefined;
     if (!row) throw new ManagedClientServiceError('NOT_FOUND');
-    return updatePayload(
+    return desiredPayloadFromSnapshot(
       WgEasyClientSchema.parse(JSON.parse(row.public_data)),
-      owner,
+      sharedFromRow(owner),
     );
   }
 
@@ -848,7 +1107,7 @@ export class ManagedClientService {
     const now = this.now().getTime();
     for (const placement of this.#placementRows(clientId)) {
       const desired = this.#parseDesired(placement.desired_payload);
-      const next: DesiredState =
+      const next: PlacementDesiredState =
         desired.kind === 'complete'
           ? {
               kind: 'complete',
@@ -871,36 +1130,8 @@ export class ManagedClientService {
     }
   }
 
-  #parseDesired(value: string | null): DesiredState {
-    if (!value) throw new Error('Managed placement has no desired state');
-    const parsed: unknown = JSON.parse(value);
-    if (typeof parsed !== 'object' || parsed === null || !('kind' in parsed)) {
-      throw new Error('Managed placement desired state is invalid');
-    }
-    if ((parsed as { kind: unknown }).kind === 'complete') {
-      if (!('payload' in parsed)) {
-        throw new Error('Managed placement desired state is invalid');
-      }
-      return {
-        kind: 'complete',
-        payload: WgEasyClientUpdateRequestSchema.parse(parsed.payload),
-      };
-    }
-    const shared = parsed as Partial<Extract<DesiredState, { kind: 'shared' }>>;
-    if (
-      shared.kind !== 'shared' ||
-      typeof shared.name !== 'string' ||
-      typeof shared.enabled !== 'boolean' ||
-      (shared.expiresAt !== null && typeof shared.expiresAt !== 'string')
-    ) {
-      throw new Error('Managed placement desired state is invalid');
-    }
-    return {
-      kind: 'shared',
-      name: shared.name,
-      expiresAt: shared.expiresAt,
-      enabled: shared.enabled,
-    };
+  #parseDesired(value: string | null): PlacementDesiredState {
+    return parsePlacementDesired(value);
   }
 
   #startAttempt(placementId: string, operation: AttemptOperation): string {

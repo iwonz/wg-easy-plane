@@ -11,6 +11,7 @@ import type {
 } from '@wg-easy-plane/wg-easy-adapter';
 
 import { ManagedClientService } from './managed';
+import { reconcileManagedPlacementsForNode } from './client-state';
 import { NodeMutationError } from './service';
 import { serializeSafeClient } from './sync';
 
@@ -200,6 +201,7 @@ function createFixture() {
     connection,
     createOutcomes,
     deleteOutcomes,
+    inventory,
     snapshots,
     service,
     toggles,
@@ -481,6 +483,99 @@ describe('ManagedClientService', () => {
     expect(fixture.service.get(created.id).placements[0]).toMatchObject({
       status: 'missing',
       lastErrorCode: 'SNAPSHOT_MISSING',
+    });
+  });
+
+  it('adopts explicit node-scoped clients and resolves drift without hidden mutations', async () => {
+    const fixture = createFixture();
+    fixture.snapshots
+      .get(NODE_ONE)
+      ?.set(91, { ...client(91, 'Remote one'), mtu: 1380 });
+    fixture.snapshots.get(NODE_TWO)?.set(92, client(92, 'Remote two'));
+    await fixture.inventory.syncNode(NODE_ONE);
+    await fixture.inventory.syncNode(NODE_TWO);
+    fixture.createOutcomes.push(999);
+
+    const adopted = fixture.service.adopt({
+      name: 'Unified synthetic',
+      expiresAt: null,
+      enabled: true,
+      selections: [
+        { nodeId: NODE_ONE, remoteClientId: 91 },
+        { nodeId: NODE_TWO, remoteClientId: 92 },
+      ],
+    });
+    expect(adopted.placements).toEqual([
+      expect.objectContaining({
+        nodeId: NODE_ONE,
+        remoteClientId: 91,
+        status: 'drift',
+      }),
+      expect.objectContaining({
+        nodeId: NODE_TWO,
+        remoteClientId: 92,
+        status: 'drift',
+      }),
+    ]);
+    expect(fixture.createOutcomes).toEqual([999]);
+    expect(fixture.updates).toHaveLength(0);
+
+    const first = adopted.placements[0]!;
+    const firstDrift = await fixture.service.getDrift(adopted.id, first.id);
+    expect(
+      firstDrift.differences.map((difference) => difference.field),
+    ).toEqual(['name']);
+    expect(JSON.stringify(firstDrift)).not.toMatch(
+      /publicKey|privateKey|configuration|qr/i,
+    );
+
+    const accepted = fixture.service.acceptRemote(adopted.id, first.id);
+    expect(accepted.name).toBe('Remote one');
+    expect(accepted.placements).toEqual([
+      expect.objectContaining({ nodeId: NODE_ONE, status: 'active' }),
+      expect.objectContaining({ nodeId: NODE_TWO, status: 'drift' }),
+    ]);
+    expect(fixture.updates).toHaveLength(0);
+
+    const second = accepted.placements[1]!;
+    const reapplied = await fixture.service.reapplyDesired(
+      accepted.id,
+      second.id,
+    );
+    expect(reapplied.placements[1]?.status).toBe('active');
+    expect(fixture.updates).toHaveLength(1);
+    expect(fixture.updates[0]).toMatchObject({
+      nodeId: NODE_TWO,
+      remoteClientId: 92,
+      input: { name: 'Remote one', enabled: true },
+    });
+
+    fixture.snapshots.get(NODE_TWO)?.delete(92);
+    await fixture.inventory.syncNode(NODE_TWO);
+    reconcileManagedPlacementsForNode(
+      fixture.connection,
+      NODE_TWO,
+      Date.parse('2026-09-27T10:00:00.000Z'),
+    );
+    const missing = fixture.service.get(adopted.id).placements[1]!;
+    expect(missing).toMatchObject({
+      status: 'missing',
+      lastErrorCode: 'SNAPSHOT_MISSING',
+    });
+    await expect(
+      fixture.service.getDrift(adopted.id, missing.id),
+    ).resolves.toMatchObject({ remote: null, differences: [] });
+
+    fixture.createOutcomes.length = 0;
+    fixture.createOutcomes.push(93);
+    const recreated = await fixture.service.recreateMissing(
+      adopted.id,
+      missing.id,
+    );
+    expect(recreated.placements[1]).toMatchObject({
+      remoteClientId: 93,
+      status: 'active',
+      desiredHydrated: true,
     });
   });
 });

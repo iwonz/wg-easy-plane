@@ -201,6 +201,30 @@
       "compatibilityDescription": "This pinned release supports jC, jMin, jMax and i1–i5. Newer AWG 3.0/3.1 padding, rekey, cookie and handshake controls are not present in its update API and are intentionally not sent.",
       "cancel": "Cancel",
       "save": "Save advanced settings"
+    },
+    "adoption": {
+      "open": "Adopt discovered",
+      "title": "Adopt discovered clients",
+      "description": "Select at most one current remote client per node. Adoption creates local management records and does not mutate any node.",
+      "enabled": "Managed client enabled",
+      "selected": "Selected nodes: {count}",
+      "submit": "Adopt clients"
+    },
+    "drift": {
+      "inspect": "Inspect",
+      "title": "Placement state · {node}",
+      "loading": "Loading validated placement state",
+      "loadFailure": "The placement state could not be loaded. Synchronize the node and try again.",
+      "description": "Remote values differ from the saved desired state. Choose explicitly which state should win.",
+      "missingDescription": "A complete successful sync confirmed that this remote client is missing. Recreating it allocates a new remote client.",
+      "field": "Field",
+      "desired": "Desired",
+      "remote": "Remote",
+      "noDifferences": "No differences remain.",
+      "acceptRemote": "Accept remote",
+      "reapplyDesired": "Reapply desired",
+      "recreate": "Recreate placement",
+      "close": "Close"
     }
   },
   "tokens": {

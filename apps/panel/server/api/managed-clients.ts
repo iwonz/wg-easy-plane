@@ -1,6 +1,8 @@
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import {
+  acceptPlacementRemoteRoute,
   addManagedPlacementRoute,
+  adoptManagedClientRoute,
   cancelAmbiguousPlacementRoute,
   createManagedClientRoute,
   deleteManagedClientRoute,
@@ -8,10 +10,13 @@ import {
   enableManagedClientRoute,
   getManagedClientRoute,
   getPlacementAdvancedRoute,
+  getPlacementDriftRoute,
   linkAmbiguousCandidateRoute,
   listAmbiguousCandidatesRoute,
   listManagedClientsRoute,
   removeManagedPlacementRoute,
+  reapplyPlacementDesiredRoute,
+  recreateMissingPlacementRoute,
   retryManagedPlacementRoute,
   updateManagedClientRoute,
   updatePlacementAdvancedRoute,
@@ -59,6 +64,18 @@ export function registerManagedClientRoutes(
     });
     return context.json(
       await runtime.managedClientService.create(context.req.valid('json')),
+      201,
+    );
+  });
+
+  api.openapi(adoptManagedClientRoute, async (context) => {
+    const runtime = getRuntime();
+    await authorizeRequest(context, runtime, {
+      requiredScope: 'clients:write',
+      mutation: true,
+    });
+    return context.json(
+      runtime.managedClientService.adopt(context.req.valid('json')),
       201,
     );
   });
@@ -187,6 +204,55 @@ export function registerManagedClientRoutes(
         placementId,
         context.req.valid('json'),
       ),
+      200,
+    );
+  });
+
+  api.openapi(getPlacementDriftRoute, async (context) => {
+    const runtime = getRuntime();
+    await authorizeRequest(context, runtime, { requiredScope: 'clients:read' });
+    const { clientId, placementId } = context.req.valid('param');
+    return context.json(
+      await runtime.managedClientService.getDrift(clientId, placementId),
+      200,
+    );
+  });
+
+  api.openapi(acceptPlacementRemoteRoute, async (context) => {
+    const runtime = getRuntime();
+    await authorizeRequest(context, runtime, {
+      requiredScope: 'clients:write',
+      mutation: true,
+    });
+    const { clientId, placementId } = context.req.valid('param');
+    return context.json(
+      runtime.managedClientService.acceptRemote(clientId, placementId),
+      200,
+    );
+  });
+
+  api.openapi(reapplyPlacementDesiredRoute, async (context) => {
+    const runtime = getRuntime();
+    await authorizeRequest(context, runtime, {
+      requiredScope: 'clients:write',
+      mutation: true,
+    });
+    const { clientId, placementId } = context.req.valid('param');
+    return context.json(
+      await runtime.managedClientService.reapplyDesired(clientId, placementId),
+      200,
+    );
+  });
+
+  api.openapi(recreateMissingPlacementRoute, async (context) => {
+    const runtime = getRuntime();
+    await authorizeRequest(context, runtime, {
+      requiredScope: 'clients:write',
+      mutation: true,
+    });
+    const { clientId, placementId } = context.req.valid('param');
+    return context.json(
+      await runtime.managedClientService.recreateMissing(clientId, placementId),
       200,
     );
   });
