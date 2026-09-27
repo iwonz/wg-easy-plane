@@ -31,25 +31,6 @@ The adapter SHALL derive node mode only from the strict 15.4.0 `isAwg` informati
 - **WHEN** compatible information contains `isAwg: false`
 - **THEN** the adapter reports mode `wireguard`
 
-### Requirement: Constrained transport
-The adapter SHALL use a 10-second default request timeout, SHALL never follow HTTP redirects, SHALL validate response size before buffering beyond its configured limit, and SHALL use certificate verification unless insecure TLS is explicitly enabled for that adapter instance.
-
-#### Scenario: Request times out
-- **WHEN** the upstream does not complete within the configured timeout
-- **THEN** the request is aborted and returns `TIMEOUT` without including the node URL or credential
-
-#### Scenario: Upstream redirect
-- **WHEN** an endpoint returns a redirect response
-- **THEN** the adapter does not contact the redirect target and returns `REDIRECT_BLOCKED`
-
-#### Scenario: Untrusted TLS by default
-- **WHEN** a TLS certificate cannot be verified and insecure TLS is not enabled
-- **THEN** the adapter returns `TLS_ERROR`
-
-#### Scenario: Explicit insecure TLS
-- **WHEN** insecure TLS is explicitly enabled for one adapter instance
-- **THEN** only that instance disables certificate verification and its connection metadata reports the insecure setting
-
 ### Requirement: Basic Authentication boundary
 Every protected wg-easy request SHALL carry a Basic Authorization value derived in memory from that node's username and password, and the adapter SHALL never expose or log the header or credentials.
 
@@ -123,3 +104,22 @@ The repository SHALL test the adapter only with synthetic fixtures and local moc
 #### Scenario: Contract fixture review
 - **WHEN** adapter fixtures and tests are inspected
 - **THEN** they contain only documentation-range addresses, synthetic identities, and generated non-operational payloads
+
+### Requirement: Verified constrained transport
+The adapter SHALL use a 10-second default request timeout, SHALL never follow HTTP redirects, SHALL validate response size before buffering beyond its configured limit, and SHALL verify TLS certificates for every HTTPS request with no per-instance or per-node bypass.
+
+#### Scenario: Request times out
+- **WHEN** the upstream does not complete within the configured timeout
+- **THEN** the request is aborted and returns `TIMEOUT` without including the node URL or credential
+
+#### Scenario: Upstream redirect
+- **WHEN** an endpoint returns a redirect response
+- **THEN** the adapter does not contact the redirect target and returns `REDIRECT_BLOCKED`
+
+#### Scenario: Untrusted TLS certificate
+- **WHEN** a TLS certificate cannot be verified
+- **THEN** the adapter returns `TLS_ERROR` without exposing certificate, node URL, or credential details and offers no verification bypass
+
+#### Scenario: Adapter connection metadata
+- **WHEN** an adapter instance is created or inspected
+- **THEN** its accepted connection options and safe metadata contain no insecure TLS setting

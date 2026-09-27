@@ -30,5 +30,5 @@
 ## 6. Release workflow
 
 - [x] 6.1 Review the final diff for secrets, local endpoints, database files, configurations, QR payloads, screenshots, recordings, and `.env` changes; verify `git status`, gitleaks, and privacy audit show only intended safe files.
-- [ ] 6.2 Commit the implementation with a breaking `feat!` Conventional Commit, archive and strictly validate the OpenSpec change, and commit the archive; verify the branch history and clean worktree.
-- [ ] 6.3 Fast-forward the verified branch into clean `master`, run the post-merge smoke check, push, and verify GitHub publishes release `v2.0.0` and both GHCR images before deleting the branch; verify remote release/package state and final clean `master`.
+- [x] 6.2 Commit the implementation with a breaking `feat!` Conventional Commit, archive and strictly validate the OpenSpec change, and commit the archive; verify the branch history and clean worktree.
+- [x] 6.3 Fast-forward the verified branch into clean `master`, run the post-merge smoke check, push, and verify GitHub publishes release `v2.0.0` and both GHCR images before deleting the branch; verify remote release/package state and final clean `master`.
