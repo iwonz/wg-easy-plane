@@ -29,4 +29,22 @@ describe('browser security headers', () => {
     first[0]!.value = 'changed';
     expect(second[0]!.value).not.toBe('changed');
   });
+
+  it('allows eval only when development mode is explicitly enabled', () => {
+    const defaultPolicy = browserSecurityHeaders().find(
+      ({ key }) => key === 'Content-Security-Policy',
+    )?.value;
+    const productionPolicy = browserSecurityHeaders({
+      development: false,
+    }).find(({ key }) => key === 'Content-Security-Policy')?.value;
+    const developmentPolicy = browserSecurityHeaders({
+      development: true,
+    }).find(({ key }) => key === 'Content-Security-Policy')?.value;
+
+    expect(defaultPolicy).not.toContain("'unsafe-eval'");
+    expect(productionPolicy).not.toContain("'unsafe-eval'");
+    expect(developmentPolicy).toContain(
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    );
+  });
 });

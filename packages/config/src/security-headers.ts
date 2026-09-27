@@ -3,22 +3,11 @@ export type BrowserSecurityHeader = {
   value: string;
 };
 
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "base-uri 'none'",
-  "connect-src 'self'",
-  "font-src 'self' data:",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "img-src 'self' data: blob:",
-  "object-src 'none'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "worker-src 'self' blob:",
-].join('; ');
+export type BrowserSecurityHeaderOptions = {
+  development?: boolean;
+};
 
-const headers = Object.freeze<BrowserSecurityHeader[]>([
-  { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+const commonHeaders = Object.freeze<BrowserSecurityHeader[]>([
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
   { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
   {
@@ -34,6 +23,33 @@ const headers = Object.freeze<BrowserSecurityHeader[]>([
   { key: 'X-Frame-Options', value: 'DENY' },
 ]);
 
-export function browserSecurityHeaders(): BrowserSecurityHeader[] {
-  return headers.map((header) => ({ ...header }));
+function contentSecurityPolicy(development: boolean): string {
+  const scriptSource = ["'self'", "'unsafe-inline'"];
+  if (development) scriptSource.push("'unsafe-eval'");
+
+  return [
+    "default-src 'self'",
+    "base-uri 'none'",
+    "connect-src 'self'",
+    "font-src 'self' data:",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "img-src 'self' data: blob:",
+    "object-src 'none'",
+    `script-src ${scriptSource.join(' ')}`,
+    "style-src 'self' 'unsafe-inline'",
+    "worker-src 'self' blob:",
+  ].join('; ');
+}
+
+export function browserSecurityHeaders(
+  options: BrowserSecurityHeaderOptions = {},
+): BrowserSecurityHeader[] {
+  return [
+    {
+      key: 'Content-Security-Policy',
+      value: contentSecurityPolicy(options.development === true),
+    },
+    ...commonHeaders.map((header) => ({ ...header })),
+  ];
 }

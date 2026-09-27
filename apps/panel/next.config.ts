@@ -9,7 +9,14 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['better-sqlite3'],
   transpilePackages: ['@wg-easy-plane/ui'],
   async headers() {
-    return [{ source: '/:path*', headers: browserSecurityHeaders() }];
+    return [
+      {
+        source: '/:path*',
+        headers: browserSecurityHeaders({
+          development: process.env.NODE_ENV === 'development',
+        }),
+      },
+    ];
   },
 };
 

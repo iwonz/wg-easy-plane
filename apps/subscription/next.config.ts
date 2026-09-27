@@ -11,7 +11,9 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/:path*',
-        headers: browserSecurityHeaders(),
+        headers: browserSecurityHeaders({
+          development: process.env.NODE_ENV === 'development',
+        }),
       },
       {
         source: '/',
