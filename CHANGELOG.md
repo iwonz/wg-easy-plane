@@ -2,6 +2,13 @@
 
 All notable changes are generated automatically from Conventional Commits.
 
+# [2.1.0](https://github.com/iwonz/wg-easy-plane/compare/v2.0.0...v2.1.0) (2026-09-27)
+
+
+### Features
+
+* **panel:** polish navigation and branding ([75e38e1](https://github.com/iwonz/wg-easy-plane/commit/75e38e1eb18686f63e40fb0f3d0c22537b869539))
+
 # [2.0.0](https://github.com/iwonz/wg-easy-plane/compare/v1.0.0...v2.0.0) (2026-09-27)
 
 
