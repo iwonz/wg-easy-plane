@@ -69,7 +69,14 @@ Start both applications by enabling the optional profile:
 docker compose --profile subscription up -d
 ```
 
-Compose uses the private `http://panel:3000` service origin for BFF traffic and keeps panel state in the `panel-data` volume. Override `WGEP_VERSION` with an exact release, and override `PANEL_PORT` or `SUBSCRIPTION_PORT` only when different host bindings are required.
+To run only the subscription application against an existing panel:
+
+```bash
+CONTROL_PLANE_INTERNAL_URL=https://panel.example.com \
+  docker compose --profile subscription up -d --no-deps subscription
+```
+
+Combined Compose deployment uses the private `http://panel:3000` service origin from `.env.example` for BFF traffic and keeps panel state in the `panel-data` volume. Override `WGEP_VERSION` with an exact release, and override `PANEL_PORT` or `SUBSCRIPTION_PORT` only when different host bindings are required.
 
 ## Upgrades and recovery
 

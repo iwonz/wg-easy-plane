@@ -1,3 +1,3 @@
 # Changelog
 
-Notable changes to WG Easy Plane will be recorded here by Release Please.
+All notable changes are generated automatically from Conventional Commits.
