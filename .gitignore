@@ -1,0 +1,51 @@
+# Dependencies and build output
+node_modules/
+.pnpm-store/
+.turbo/
+.next/
+dist/
+coverage/
+
+# Environment and secrets
+.env*
+!.env.example
+.env.keys
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# Databases and generated data
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+data/
+backups/
+
+# VPN and sensitive connection artifacts
+*.conf
+*.wg
+*.awg
+*.mobileconfig
+*.qrcode
+*.qr.svg
+
+# Logs and browser artifacts
+*.log
+playwright-report/
+test-results/
+output/playwright/
+*.har
+*.trace.zip
+storageState.json
+.auth/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo

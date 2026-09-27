@@ -1,0 +1,34 @@
+schema: spec-driven
+
+context: |
+  Language: en
+  All artifacts must be written in en.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  This is a public repository. Never include real credentials, node endpoints,
+  client identities, VPN configurations, QR payloads, database contents, or
+  recordings from live systems in artifacts, fixtures, logs, or examples.
+  Work sequentially: one active change, one branch, then validate, archive,
+  fast-forward into master, verify, and clean up before the next change.
+
+rules:
+  proposal:
+    - Keep the proposal scoped to one roadmap change.
+    - Identify privacy and compatibility impact explicitly when relevant.
+  specs:
+    - Use synthetic examples only and specify safe failure behavior at trust boundaries.
+  design:
+    - Record security-sensitive data flow and redaction decisions.
+  tasks:
+    - Every implementation task must name its verification command or observable check.
+    - Include tests in the same change that introduces behavior.
+
+operations:
+  apply:
+    guidance:
+      - Work only on the current change and keep user-facing progress concise.
+      - Inspect git status and the diff for sensitive data before every commit.
+      - Use Conventional Commits and do not place personal data in messages.
+  archive:
+    guidance:
+      - Archive only after strict validation and all relevant checks pass.
+      - Leave no active change or temporary artifact behind on master.
