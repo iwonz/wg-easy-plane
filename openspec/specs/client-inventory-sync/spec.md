@@ -81,11 +81,15 @@ The system SHALL expose manual node synchronization to administrators and PATs w
 - **THEN** the API returns a safe conflict response and does not start a second upstream request
 
 ### Requirement: Read-only discovered-client API
-The system SHALL expose cursor-paginated discovered-client snapshots to administrators and PATs with `clients:read`, with node identity, node display name and mode, remote client identifier, safe public fields, first-seen, last-seen, missing, and snapshot-version metadata.
+The system SHALL expose cursor-paginated unlinked discovered-client snapshots to administrators and PATs with `clients:read`, with node identity, node display name and mode, remote client identifier, safe public fields, first-seen, last-seen, missing, and snapshot-version metadata; snapshots linked to any managed placement SHALL remain stored but SHALL be excluded from this list.
 
 #### Scenario: Discovered list is requested
 - **WHEN** an authorized caller requests a page of discovered clients
-- **THEN** records have stable node-scoped identities and include freshness metadata without credentials or delivery payloads
+- **THEN** unlinked records have stable node-scoped identities and include freshness metadata without credentials or delivery payloads
+
+#### Scenario: Remote client is linked to a placement
+- **WHEN** a discovered snapshot's node and remote identifier are referenced by a managed placement
+- **THEN** that snapshot no longer appears in the Discovered list while remaining available to managed lifecycle services
 
 #### Scenario: Invalid or stale cursor
 - **WHEN** a caller supplies a malformed cursor
