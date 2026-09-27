@@ -20,4 +20,4 @@
 - [x] 4.1 Extend CI to validate Compose with synthetic values and build both final image targets without publishing.
 - [x] 4.2 Build and run both images locally, verify non-root identity, health, fresh panel migration, restart without redundant backup, and panel-only versus profiled Compose behavior.
 - [x] 4.3 Run strict OpenSpec validation, formatting, lint, typecheck, all tests, both production builds, workflow validation, gitleaks, and privacy inspection.
-- [ ] 4.4 Archive the change, fast-forward into clean `master`, rerun `pnpm verify`, push, and remove the task branch.
+- [x] 4.4 Archive the change, fast-forward into clean `master`, rerun `pnpm verify`, push, and remove the task branch.
