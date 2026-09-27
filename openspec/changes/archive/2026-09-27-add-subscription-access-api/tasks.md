@@ -17,4 +17,4 @@
 
 - [x] 4.1 Exercise fragment-style exchange, immediate rotate/revoke invalidation, summary, config, and QR against synthetic data without retaining tokens or artifacts.
 - [x] 4.2 Run strict OpenSpec validation, formatting, lint, typecheck, all tests, both builds, gitleaks, and privacy inspection.
-- [ ] 4.3 Archive the change, fast-forward into clean `master`, rerun `pnpm verify`, push, and remove the task branch.
+- [x] 4.3 Archive the change, fast-forward into clean `master`, rerun `pnpm verify`, push, and remove the task branch.
