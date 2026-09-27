@@ -2,6 +2,16 @@
 
 All notable changes are generated automatically from Conventional Commits.
 
+# [2.0.0](https://github.com/iwonz/wg-easy-plane/compare/v1.0.0...v2.0.0) (2026-09-27)
+
+
+* feat!: enforce trusted TLS and refine panel shell ([486e35b](https://github.com/iwonz/wg-easy-plane/commit/486e35b6cdcdb78bf8c967b96c9813759eb3017a))
+
+
+### BREAKING CHANGES
+
+* node APIs no longer accept or return allowInsecureTls; HTTPS nodes always require trusted certificates.
+
 # 1.0.0 (2026-09-27)
 
 
