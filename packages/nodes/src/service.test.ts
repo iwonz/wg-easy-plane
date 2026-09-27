@@ -46,6 +46,8 @@ function createFixture() {
   let ivByte = 1;
   const calls: WgEasyConnection[] = [];
   const outcomes: (WgEasyProbe | Error)[] = [];
+  const mutations: string[] = [];
+  const mutationState: { error: Error | null } = { error: null };
   const service = new NodeService(connection, {
     masterKey: MASTER_KEY,
     requestTimeoutMs: 4321,
@@ -61,12 +63,36 @@ function createFixture() {
         if (outcome instanceof Error) throw outcome;
         return outcome;
       },
+      async createClient() {
+        mutations.push('create');
+        if (mutationState.error) throw mutationState.error;
+        return 77;
+      },
+      async updateClient(clientId) {
+        mutations.push(`update:${clientId}`);
+        if (mutationState.error) throw mutationState.error;
+      },
+      async enableClient(clientId) {
+        mutations.push(`enable:${clientId}`);
+        if (mutationState.error) throw mutationState.error;
+      },
+      async disableClient(clientId) {
+        mutations.push(`disable:${clientId}`);
+        if (mutationState.error) throw mutationState.error;
+      },
+      async deleteClient(clientId) {
+        mutations.push(`delete:${clientId}`);
+        if (mutationState.error) throw mutationState.error;
+        return 'not_found';
+      },
     }),
   });
 
   return {
     calls,
     connection,
+    mutationState,
+    mutations,
     outcomes,
     service,
     advance(milliseconds: number) {
@@ -138,6 +164,59 @@ describe('NodeService', () => {
         timeoutMs: 4321,
       }),
     ]);
+  });
+
+  it('gates mutations and persists safe adapter failures', async () => {
+    const fixture = createFixture();
+    fixture.outcomes.push(healthyProbe());
+    const node = await fixture.service.create(createInput());
+
+    expect(
+      await fixture.service.createRemoteClient(node.id, {
+        name: 'Synthetic managed client',
+        expiresAt: null,
+      }),
+    ).toBe(77);
+    fixture.mutationState.error = new WgEasyAdapterError({
+      code: 'TIMEOUT',
+      operation: 'update_client',
+    });
+    await expect(
+      fixture.service.updateRemoteClient(node.id, 77, {
+        name: 'Synthetic managed client',
+        enabled: true,
+        expiresAt: null,
+        ipv4Address: '192.0.2.77',
+        ipv6Address: '2001:db8::77',
+        preUp: '',
+        postUp: '',
+        preDown: '',
+        postDown: '',
+        allowedIps: null,
+        serverAllowedIps: [],
+        firewallIps: null,
+        mtu: 1420,
+        jC: null,
+        jMin: null,
+        jMax: null,
+        i1: null,
+        i2: null,
+        i3: null,
+        i4: null,
+        i5: null,
+        persistentKeepalive: 25,
+        serverEndpoint: null,
+        dns: null,
+      }),
+    ).rejects.toMatchObject({ code: 'TIMEOUT' });
+    expect(fixture.service.get(node.id)).toMatchObject({
+      status: 'unreachable',
+      lastErrorCode: 'TIMEOUT',
+    });
+    await expect(
+      fixture.service.deleteRemoteClient(node.id, 77),
+    ).rejects.toMatchObject({ code: 'NODE_NOT_MUTABLE' });
+    expect(fixture.mutations).toEqual(['create', 'update:77']);
   });
 
   it('persists every safe failure class without raw error details', async () => {

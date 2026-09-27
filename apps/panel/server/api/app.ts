@@ -22,6 +22,11 @@ import {
   type InventoryApiDependencies,
 } from './inventory';
 import {
+  handleManagedClientApiError,
+  registerManagedClientRoutes,
+  type ManagedClientApiDependencies,
+} from './managed-clients';
+import {
   handleNodeApiError,
   registerNodeRoutes,
   type NodeApiDependencies,
@@ -43,7 +48,8 @@ export const openApiDocumentConfig = {
 export type ApiDependencies = AuthApiDependencies &
   ApiTokenApiDependencies &
   NodeApiDependencies &
-  InventoryApiDependencies;
+  InventoryApiDependencies &
+  ManagedClientApiDependencies;
 
 export function createApi(dependencies: ApiDependencies = {}) {
   const rootApi = new OpenAPIHono<ApiEnvironment>({
@@ -120,6 +126,7 @@ export function createApi(dependencies: ApiDependencies = {}) {
   registerApiTokenRoutes(api, dependencies);
   registerNodeRoutes(api, dependencies);
   registerInventoryRoutes(api, dependencies);
+  registerManagedClientRoutes(api, dependencies);
 
   api.doc31('/openapi.json', openApiDocumentConfig);
   api.get(
@@ -149,6 +156,8 @@ export function createApi(dependencies: ApiDependencies = {}) {
     if (authorizationResponse) return authorizationResponse;
     const inventoryResponse = handleInventoryApiError(error, context);
     if (inventoryResponse) return inventoryResponse;
+    const managedClientResponse = handleManagedClientApiError(error, context);
+    if (managedClientResponse) return managedClientResponse;
     const nodeResponse = handleNodeApiError(error, context);
     if (nodeResponse) return nodeResponse;
     return context.json(

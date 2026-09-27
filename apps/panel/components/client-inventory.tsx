@@ -6,13 +6,22 @@ import {
   Button,
   Group,
   Loader,
+  Modal,
+  MultiSelect,
   Paper,
+  Select,
   Stack,
   Table,
   Tabs,
   Text,
+  TextInput,
   Title,
 } from '@mantine/core';
+import type {
+  AmbiguousCreateCandidate,
+  ManagedClient,
+  ManagedPlacement,
+} from '@wg-easy-plane/contracts';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
@@ -30,10 +39,79 @@ function formatDate(value: string | null): string {
 export const ClientInventory = observer(function ClientInventory() {
   const t = useTranslations('clients');
   const [store] = useState(() => new InventoryStore());
+  const [createOpened, setCreateOpened] = useState(false);
+  const [name, setName] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
+  const [nodeIds, setNodeIds] = useState<string[]>([]);
+  const [editClient, setEditClient] = useState<ManagedClient | null>(null);
+  const [placementClientId, setPlacementClientId] = useState<string | null>(
+    null,
+  );
+  const [placementNodeId, setPlacementNodeId] = useState<string | null>(null);
+  const [resolution, setResolution] = useState<{
+    clientId: string;
+    placement: ManagedPlacement;
+  } | null>(null);
+  const [candidates, setCandidates] = useState<AmbiguousCreateCandidate[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
 
   useEffect(() => {
-    void store.load();
+    void store.loadAll();
   }, [store]);
+
+  const nodeOptions = store.nodes.map((node) => ({
+    value: node.id,
+    label: `${node.name} · ${node.status}`,
+    disabled: node.status !== 'healthy' || node.detectedVersion !== '15.4.0',
+  }));
+
+  const submitCreate = async () => {
+    const success = await store.createManaged({
+      name,
+      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+      nodeIds,
+    });
+    if (success) {
+      setCreateOpened(false);
+      setName('');
+      setExpiresAt('');
+      setNodeIds([]);
+    }
+  };
+
+  const openEdit = (client: ManagedClient) => {
+    setName(client.name);
+    setExpiresAt(client.expiresAt ? client.expiresAt.slice(0, 16) : '');
+    setEditClient(client);
+  };
+
+  const submitEdit = async () => {
+    if (!editClient) return;
+    const success = await store.updateManaged(editClient.id, {
+      name,
+      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+    });
+    if (success) {
+      setEditClient(null);
+      setName('');
+      setExpiresAt('');
+    }
+  };
+
+  const openResolution = async (
+    clientId: string,
+    placement: ManagedPlacement,
+  ) => {
+    setResolution({ clientId, placement });
+    setCandidatesLoading(true);
+    try {
+      setCandidates(await store.listCandidates(clientId, placement.id));
+    } catch {
+      setCandidates([]);
+    } finally {
+      setCandidatesLoading(false);
+    }
+  };
 
   return (
     <Paper p="xl" radius="lg" shadow="sm" withBorder>
@@ -44,15 +122,15 @@ export const ClientInventory = observer(function ClientInventory() {
             <Text c="dimmed">{t('description')}</Text>
           </div>
           <Button
-            loading={store.loading}
-            onClick={() => void store.load()}
+            loading={store.loading || store.managedLoading}
+            onClick={() => void store.loadAll()}
             variant="light"
           >
             {t('refresh')}
           </Button>
         </Group>
 
-        {store.failure ? (
+        {store.failure || store.managedFailure ? (
           <Alert color="red" onClose={store.clearFailure} withCloseButton>
             {t('loadFailure')}
           </Alert>
@@ -65,7 +143,198 @@ export const ClientInventory = observer(function ClientInventory() {
           </Tabs.List>
 
           <Tabs.Panel pt="md" value="managed">
-            <Text c="dimmed">{t('managedPending')}</Text>
+            <Stack gap="md">
+              <Group justify="space-between">
+                <Text c="dimmed">{t('managedDescription')}</Text>
+                <Button
+                  onClick={() => setCreateOpened(true)}
+                  disabled={nodeOptions.length === 0}
+                >
+                  {t('create')}
+                </Button>
+              </Group>
+              {store.managedLoading && store.managedItems.length === 0 ? (
+                <Group justify="center">
+                  <Loader aria-label={t('managedLoading')} />
+                </Group>
+              ) : store.managedItems.length === 0 ? (
+                <Text c="dimmed">{t('managedEmpty')}</Text>
+              ) : (
+                store.managedItems.map((client) => (
+                  <Paper key={client.id} withBorder p="md" radius="md">
+                    <Stack gap="sm">
+                      <Group justify="space-between" align="flex-start">
+                        <div>
+                          <Group gap="xs">
+                            <Text fw={700}>{client.name}</Text>
+                            <Badge
+                              color={client.enabled ? 'green' : 'gray'}
+                              variant="light"
+                            >
+                              {client.enabled
+                                ? t('states.enabled')
+                                : t('states.disabled')}
+                            </Badge>
+                            {client.lifecycleStatus === 'deleting' ? (
+                              <Badge color="orange" variant="light">
+                                {t('states.deleting')}
+                              </Badge>
+                            ) : null}
+                          </Group>
+                          <Text c="dimmed" size="sm">
+                            {t('expiresValue', {
+                              value: formatDate(client.expiresAt),
+                            })}
+                          </Text>
+                        </div>
+                        <Group gap="xs">
+                          <Button
+                            size="xs"
+                            variant="light"
+                            onClick={() => openEdit(client)}
+                            disabled={client.lifecycleStatus === 'deleting'}
+                          >
+                            {t('edit')}
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="light"
+                            onClick={() =>
+                              void store.setManagedEnabled(
+                                client,
+                                !client.enabled,
+                              )
+                            }
+                            loading={store.mutating}
+                            disabled={client.lifecycleStatus === 'deleting'}
+                          >
+                            {client.enabled ? t('disable') : t('enable')}
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="light"
+                            onClick={() => setPlacementClientId(client.id)}
+                            disabled={client.lifecycleStatus === 'deleting'}
+                          >
+                            {t('addPlacement')}
+                          </Button>
+                          <Button
+                            size="xs"
+                            color="red"
+                            variant="light"
+                            onClick={() => void store.deleteManaged(client.id)}
+                            loading={store.mutating}
+                          >
+                            {t('delete')}
+                          </Button>
+                        </Group>
+                      </Group>
+                      <Table.ScrollContainer minWidth={680}>
+                        <Table verticalSpacing="xs">
+                          <Table.Thead>
+                            <Table.Tr>
+                              <Table.Th>{t('columns.node')}</Table.Th>
+                              <Table.Th>{t('columns.remoteId')}</Table.Th>
+                              <Table.Th>{t('columns.state')}</Table.Th>
+                              <Table.Th>{t('columns.actions')}</Table.Th>
+                            </Table.Tr>
+                          </Table.Thead>
+                          <Table.Tbody>
+                            {client.placements.map((placement) => (
+                              <Table.Tr key={placement.id}>
+                                <Table.Td>{placement.nodeName}</Table.Td>
+                                <Table.Td>
+                                  {placement.remoteClientId ?? '—'}
+                                </Table.Td>
+                                <Table.Td>
+                                  <Stack gap={2}>
+                                    <Badge
+                                      color={
+                                        placement.status === 'active'
+                                          ? 'green'
+                                          : placement.status === 'ambiguous'
+                                            ? 'yellow'
+                                            : 'orange'
+                                      }
+                                      variant="light"
+                                    >
+                                      {t(`placementStates.${placement.status}`)}
+                                    </Badge>
+                                    {placement.lastErrorCode ? (
+                                      <Text c="dimmed" size="xs">
+                                        {placement.lastErrorCode}
+                                      </Text>
+                                    ) : null}
+                                  </Stack>
+                                </Table.Td>
+                                <Table.Td>
+                                  <Group gap="xs">
+                                    {placement.status === 'ambiguous' ? (
+                                      <Button
+                                        size="xs"
+                                        variant="light"
+                                        onClick={() =>
+                                          void openResolution(
+                                            client.id,
+                                            placement,
+                                          )
+                                        }
+                                      >
+                                        {t('resolve')}
+                                      </Button>
+                                    ) : placement.status !== 'active' ? (
+                                      <Button
+                                        size="xs"
+                                        variant="light"
+                                        onClick={() =>
+                                          void store.retryPlacement(
+                                            client.id,
+                                            placement.id,
+                                          )
+                                        }
+                                        loading={store.mutating}
+                                      >
+                                        {t('retry')}
+                                      </Button>
+                                    ) : null}
+                                    {client.lifecycleStatus === 'active' &&
+                                    placement.status !== 'ambiguous' ? (
+                                      <Button
+                                        size="xs"
+                                        color="red"
+                                        variant="subtle"
+                                        onClick={() =>
+                                          void store.removePlacement(
+                                            client.id,
+                                            placement.id,
+                                          )
+                                        }
+                                        loading={store.mutating}
+                                      >
+                                        {t('removePlacement')}
+                                      </Button>
+                                    ) : null}
+                                  </Group>
+                                </Table.Td>
+                              </Table.Tr>
+                            ))}
+                          </Table.Tbody>
+                        </Table>
+                      </Table.ScrollContainer>
+                    </Stack>
+                  </Paper>
+                ))
+              )}
+              {store.managedNextCursor ? (
+                <Button
+                  variant="light"
+                  onClick={() => void store.loadManaged(false)}
+                  loading={store.managedLoading}
+                >
+                  {t('loadMore')}
+                </Button>
+              ) : null}
+            </Stack>
           </Tabs.Panel>
 
           <Tabs.Panel pt="md" value="discovered">
@@ -164,6 +433,192 @@ export const ClientInventory = observer(function ClientInventory() {
           </Tabs.Panel>
         </Tabs>
       </Stack>
+
+      <Modal
+        opened={createOpened}
+        onClose={() => setCreateOpened(false)}
+        title={t('createTitle')}
+      >
+        <Stack>
+          <TextInput
+            label={t('fields.name')}
+            value={name}
+            onChange={(event) => setName(event.currentTarget.value)}
+            required
+          />
+          <TextInput
+            label={t('fields.expiration')}
+            type="datetime-local"
+            value={expiresAt}
+            onChange={(event) => setExpiresAt(event.currentTarget.value)}
+          />
+          <MultiSelect
+            label={t('fields.nodes')}
+            data={nodeOptions}
+            value={nodeIds}
+            onChange={setNodeIds}
+            required
+            searchable
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setCreateOpened(false)}>
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={() => void submitCreate()}
+              loading={store.mutating}
+              disabled={!name.trim() || nodeIds.length === 0}
+            >
+              {t('create')}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={editClient !== null}
+        onClose={() => setEditClient(null)}
+        title={t('editTitle')}
+      >
+        <Stack>
+          <TextInput
+            label={t('fields.name')}
+            value={name}
+            onChange={(event) => setName(event.currentTarget.value)}
+            required
+          />
+          <TextInput
+            label={t('fields.expiration')}
+            type="datetime-local"
+            value={expiresAt}
+            onChange={(event) => setExpiresAt(event.currentTarget.value)}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setEditClient(null)}>
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={() => void submitEdit()}
+              loading={store.mutating}
+              disabled={!name.trim()}
+            >
+              {t('save')}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={placementClientId !== null}
+        onClose={() => setPlacementClientId(null)}
+        title={t('addPlacementTitle')}
+      >
+        <Stack>
+          <Select
+            label={t('fields.node')}
+            data={nodeOptions}
+            value={placementNodeId}
+            onChange={setPlacementNodeId}
+            searchable
+          />
+          <Group justify="flex-end">
+            <Button
+              variant="default"
+              onClick={() => setPlacementClientId(null)}
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              loading={store.mutating}
+              disabled={!placementNodeId}
+              onClick={() => {
+                if (placementClientId && placementNodeId) {
+                  void store
+                    .addPlacement(placementClientId, placementNodeId)
+                    .then((success) => {
+                      if (success) {
+                        setPlacementClientId(null);
+                        setPlacementNodeId(null);
+                      }
+                    });
+                }
+              }}
+            >
+              {t('addPlacement')}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={resolution !== null}
+        onClose={() => setResolution(null)}
+        title={t('resolveTitle')}
+      >
+        <Stack>
+          <Text c="dimmed" size="sm">
+            {t('resolveDescription')}
+          </Text>
+          {candidatesLoading ? (
+            <Loader />
+          ) : candidates.length === 0 ? (
+            <Text>{t('noCandidates')}</Text>
+          ) : (
+            candidates.map((candidate) => (
+              <Paper key={candidate.remoteClientId} withBorder p="sm">
+                <Group justify="space-between">
+                  <div>
+                    <Text fw={600}>{candidate.name}</Text>
+                    <Text c="dimmed" size="xs">
+                      #{candidate.remoteClientId} ·{' '}
+                      {formatDate(candidate.lastSeenAt)}
+                    </Text>
+                  </div>
+                  <Button
+                    size="xs"
+                    onClick={() => {
+                      if (resolution)
+                        void store
+                          .linkCandidate(
+                            resolution.clientId,
+                            resolution.placement.id,
+                            candidate.remoteClientId,
+                          )
+                          .then((success) => {
+                            if (success) setResolution(null);
+                          });
+                    }}
+                  >
+                    {t('link')}
+                  </Button>
+                </Group>
+              </Paper>
+            ))
+          )}
+          <Group justify="space-between">
+            <Button
+              color="red"
+              variant="light"
+              onClick={() => {
+                if (resolution)
+                  void store
+                    .cancelAmbiguous(
+                      resolution.clientId,
+                      resolution.placement.id,
+                    )
+                    .then((success) => {
+                      if (success) setResolution(null);
+                    });
+              }}
+            >
+              {t('cancelPlacement')}
+            </Button>
+            <Button variant="default" onClick={() => setResolution(null)}>
+              {t('close')}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Paper>
   );
 });

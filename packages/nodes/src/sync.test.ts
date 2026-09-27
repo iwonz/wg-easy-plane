@@ -285,6 +285,52 @@ describe('InventorySyncService', () => {
     ).toEqual({ count: 1 });
   });
 
+  it('removes explicitly linked placements from the discovered inventory', async () => {
+    const connection = createConnection();
+    const id = insertNode(connection, 1);
+    const service = new InventorySyncService(
+      connection,
+      { fetchInventory: async () => success(id, [client(17), client(18)]) },
+      {
+        now: () => new Date(START + 1_000),
+        newId: () => '25000000-0000-4000-8000-000000000001',
+      },
+    );
+    await service.syncNode(id);
+    connection.sqlite
+      .prepare(
+        `insert into managed_clients
+         (id, name, expires_at, enabled, lifecycle_status, created_at, updated_at)
+         values (?, 'Managed synthetic', null, 1, 'active', ?, ?)`,
+      )
+      .run('26000000-0000-4000-8000-000000000001', START, START);
+    connection.sqlite
+      .prepare(
+        `insert into placements
+         (id, managed_client_id, node_id, remote_client_id, desired_payload,
+          status, last_error_code, last_attempt_at, created_at, updated_at)
+         values (?, ?, ?, 17, ?, 'active', null, ?, ?, ?)`,
+      )
+      .run(
+        '27000000-0000-4000-8000-000000000001',
+        '26000000-0000-4000-8000-000000000001',
+        id,
+        JSON.stringify({
+          kind: 'shared',
+          name: 'Managed synthetic',
+          expiresAt: null,
+          enabled: true,
+        }),
+        START,
+        START,
+        START,
+      );
+
+    expect(service.listDiscovered({ limit: 20 }).items).toEqual([
+      expect.objectContaining({ remoteClientId: 18 }),
+    ]);
+  });
+
   it('rejects overlapping node runs and recovers a stale running record', async () => {
     const connection = createConnection();
     const id = insertNode(connection, 1);

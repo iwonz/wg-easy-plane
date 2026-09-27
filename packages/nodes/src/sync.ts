@@ -249,7 +249,9 @@ export class InventorySyncService {
        n.status as node_status,
        r.remote_client_id, r.public_data, r.upstream_version, r.first_seen_at,
        r.last_seen_at, r.missing_at
-       from remote_clients r join nodes n on n.id = r.node_id`;
+       from remote_clients r join nodes n on n.id = r.node_id
+       left join placements p
+         on p.node_id = r.node_id and p.remote_client_id = r.remote_client_id`;
     const order =
       'order by r.last_seen_at desc, r.node_id desc, r.remote_client_id desc limit ?';
     const rows = (
@@ -257,9 +259,11 @@ export class InventorySyncService {
         ? this.connection.sqlite
             .prepare(
               `${select}
-               where r.last_seen_at < ?
-                  or (r.last_seen_at = ? and r.node_id < ?)
-                  or (r.last_seen_at = ? and r.node_id = ? and r.remote_client_id < ?)
+               where p.id is null and (
+                    r.last_seen_at < ?
+                 or (r.last_seen_at = ? and r.node_id < ?)
+                 or (r.last_seen_at = ? and r.node_id = ? and r.remote_client_id < ?)
+               )
                ${order}`,
             )
             .all(
@@ -272,7 +276,7 @@ export class InventorySyncService {
               input.limit + 1,
             )
         : this.connection.sqlite
-            .prepare(`${select} ${order}`)
+            .prepare(`${select} where p.id is null ${order}`)
             .all(input.limit + 1)
     ) as DiscoveredRow[];
     const visible = rows.slice(0, input.limit);

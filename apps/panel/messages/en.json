@@ -110,7 +110,36 @@
     "loadFailure": "The discovered client inventory could not be loaded.",
     "empty": "No clients have been discovered. Synchronize a healthy node first.",
     "loadMore": "Load more",
-    "managedPending": "Managed clients will be available after the lifecycle change is installed.",
+    "managedDescription": "Create one logical client across selected nodes and track each placement independently.",
+    "managedLoading": "Loading managed clients",
+    "managedEmpty": "No managed clients have been created.",
+    "create": "Create client",
+    "createTitle": "Create managed client",
+    "edit": "Edit",
+    "editTitle": "Edit shared client fields",
+    "save": "Save",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "retry": "Retry",
+    "resolve": "Resolve",
+    "resolveTitle": "Resolve ambiguous creation",
+    "resolveDescription": "Creation timed out, so an automatic retry could create a duplicate. Link a synchronized candidate or cancel only the local placement.",
+    "noCandidates": "No unlinked same-name candidate was found. Synchronize the node and check again.",
+    "link": "Link candidate",
+    "cancelPlacement": "Cancel local placement",
+    "close": "Close",
+    "cancel": "Cancel",
+    "addPlacement": "Add node",
+    "addPlacementTitle": "Add client placement",
+    "removePlacement": "Remove",
+    "expiresValue": "Expires: {value}",
+    "fields": {
+      "name": "Client name",
+      "expiration": "Expiration",
+      "nodes": "Nodes",
+      "node": "Node"
+    },
     "tabs": {
       "managed": "Managed",
       "discovered": "Discovered"
@@ -121,13 +150,26 @@
       "addresses": "Addresses",
       "expiry": "Expires",
       "seen": "Last seen",
-      "state": "State"
+      "state": "State",
+      "remoteId": "Remote ID",
+      "actions": "Actions"
     },
     "states": {
       "current": "Current",
       "stale": "Last safe snapshot",
       "missing": "Missing",
-      "disabled": "Disabled"
+      "disabled": "Disabled",
+      "enabled": "Enabled",
+      "deleting": "Deleting"
+    },
+    "placementStates": {
+      "pending": "Pending",
+      "active": "Active",
+      "error": "Error",
+      "drift": "Drift",
+      "missing": "Missing",
+      "deleting": "Deleting",
+      "ambiguous": "Needs review"
     },
     "modes": {
       "wireguard": "WireGuard",

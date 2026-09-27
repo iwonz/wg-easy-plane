@@ -26,6 +26,10 @@ describe('generated API client artifacts', () => {
       '/api/v1/nodes/{nodeId}/test',
       '/api/v1/nodes/{nodeId}/sync',
       '/api/v1/clients/discovered',
+      '/api/v1/clients/managed',
+      '/api/v1/clients/managed/{clientId}',
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/retry',
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/link',
     ]) {
       expect(source).toContain(`'${path}'`);
     }
@@ -72,5 +76,24 @@ describe('generated API client artifacts', () => {
     expect(properties).not.toHaveProperty('qr');
     expect(properties).not.toHaveProperty('publicKey');
     expect(properties).not.toHaveProperty('serverEndpoint');
+  });
+
+  it('keeps desired state and node endpoints out of managed placement metadata', async () => {
+    const document = JSON.parse(
+      await readFile(path.resolve('packages/api-client/openapi.json'), 'utf8'),
+    ) as {
+      components: {
+        schemas: {
+          ManagedPlacement: { properties: Record<string, unknown> };
+        };
+      };
+    };
+    const properties = document.components.schemas.ManagedPlacement.properties;
+
+    expect(properties).not.toHaveProperty('desiredPayload');
+    expect(properties).not.toHaveProperty('host');
+    expect(properties).not.toHaveProperty('password');
+    expect(properties).not.toHaveProperty('configuration');
+    expect(properties).not.toHaveProperty('qr');
   });
 });

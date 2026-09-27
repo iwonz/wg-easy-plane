@@ -5,6 +5,7 @@ import type { DatabaseConnection } from '@wg-easy-plane/database';
 import {
   InventorySyncScheduler,
   InventorySyncService,
+  ManagedClientService,
   NodeService,
 } from '@wg-easy-plane/nodes';
 
@@ -26,7 +27,11 @@ export type PanelInventoryRuntime = PanelNodeRuntime & {
   inventorySyncService: InventorySyncService;
 };
 
-type PanelRuntimeState = PanelInventoryRuntime & {
+export type PanelManagedClientRuntime = PanelInventoryRuntime & {
+  managedClientService: ManagedClientService;
+};
+
+type PanelRuntimeState = PanelManagedClientRuntime & {
   connection: DatabaseConnection;
   inventorySyncScheduler: InventorySyncScheduler;
 };
@@ -55,6 +60,11 @@ export function getPanelAuthRuntime(): PanelAuthRuntime {
         requestTimeoutMs: config.nodeRequestTimeoutMs,
       },
     );
+    const managedClientService = new ManagedClientService(
+      connection,
+      nodeService,
+      inventorySyncService,
+    );
     const state: PanelRuntimeState = {
       connection,
       authService: new AuthService(connection, {
@@ -65,6 +75,7 @@ export function getPanelAuthRuntime(): PanelAuthRuntime {
       }),
       nodeService,
       inventorySyncService,
+      managedClientService,
       inventorySyncScheduler,
       trustedOrigin: config.panelPublicUrl.origin,
     };
@@ -84,5 +95,9 @@ export function getPanelNodeRuntime(): PanelNodeRuntime {
 }
 
 export function getPanelInventoryRuntime(): PanelInventoryRuntime {
+  return getPanelAuthRuntime() as PanelRuntimeState;
+}
+
+export function getPanelManagedClientRuntime(): PanelManagedClientRuntime {
   return getPanelAuthRuntime() as PanelRuntimeState;
 }

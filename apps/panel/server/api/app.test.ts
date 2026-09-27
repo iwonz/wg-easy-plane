@@ -55,6 +55,10 @@ describe('panel API', () => {
     expect(document.paths).toHaveProperty('/api/v1/auth/me');
     expect(document.paths).toHaveProperty('/api/v1/tokens');
     expect(document.paths).toHaveProperty('/api/v1/tokens/{tokenId}');
+    expect(document.paths).toHaveProperty('/api/v1/clients/managed');
+    expect(document.paths).toHaveProperty(
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/link',
+    );
     expect(document.paths['/api/v1/tokens'].post.security).toEqual([
       { cookieAuth: [] },
       { bearerAuth: [] },

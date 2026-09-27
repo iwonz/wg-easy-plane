@@ -21,7 +21,10 @@ import {
   WgEasyAdapter,
   WgEasyAdapterError,
   type WgEasyClient,
+  type WgEasyClientCreateRequest,
+  type WgEasyClientUpdateRequest,
   type WgEasyConnection,
+  type WgEasyDeleteResult,
   type WgEasyProbe,
 } from '@wg-easy-plane/wg-easy-adapter';
 
@@ -38,6 +41,19 @@ type NodeServiceErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'HAS_PLACEMENTS';
+
+export type NodeMutationErrorCode = NodeErrorCode | 'NODE_NOT_MUTABLE';
+
+export class NodeMutationError extends Error {
+  constructor(readonly code: NodeMutationErrorCode) {
+    super(
+      code === 'NODE_NOT_MUTABLE'
+        ? 'Node is not safe for client mutations'
+        : 'Upstream client mutation failed',
+    );
+    this.name = 'NodeMutationError';
+  }
+}
 
 export class NodeServiceError extends Error {
   constructor(
@@ -78,7 +94,17 @@ type ProbeState = {
   checkedAt: number;
 };
 
-type ProbeAdapter = { probe(): Promise<WgEasyProbe> };
+type ProbeAdapter = {
+  probe(): Promise<WgEasyProbe>;
+  createClient?(input: WgEasyClientCreateRequest): Promise<number>;
+  updateClient?(
+    clientId: number,
+    input: WgEasyClientUpdateRequest,
+  ): Promise<void>;
+  enableClient?(clientId: number): Promise<void>;
+  disableClient?(clientId: number): Promise<void>;
+  deleteClient?(clientId: number): Promise<WgEasyDeleteResult>;
+};
 export type NodeAdapterFactory = (connection: WgEasyConnection) => ProbeAdapter;
 
 export type NodePage = {
@@ -559,6 +585,52 @@ export class NodeService {
     };
   }
 
+  async createRemoteClient(
+    nodeId: string,
+    input: WgEasyClientCreateRequest,
+  ): Promise<number> {
+    return this.#mutate(nodeId, async (adapter) => {
+      if (!adapter.createClient)
+        throw new Error('Adapter cannot create clients');
+      return adapter.createClient(input);
+    });
+  }
+
+  async updateRemoteClient(
+    nodeId: string,
+    remoteClientId: number,
+    input: WgEasyClientUpdateRequest,
+  ): Promise<void> {
+    await this.#mutate(nodeId, async (adapter) => {
+      if (!adapter.updateClient)
+        throw new Error('Adapter cannot update clients');
+      await adapter.updateClient(remoteClientId, input);
+    });
+  }
+
+  async setRemoteClientEnabled(
+    nodeId: string,
+    remoteClientId: number,
+    enabled: boolean,
+  ): Promise<void> {
+    await this.#mutate(nodeId, async (adapter) => {
+      const operation = enabled ? adapter.enableClient : adapter.disableClient;
+      if (!operation) throw new Error('Adapter cannot toggle clients');
+      await operation.call(adapter, remoteClientId);
+    });
+  }
+
+  async deleteRemoteClient(
+    nodeId: string,
+    remoteClientId: number,
+  ): Promise<WgEasyDeleteResult> {
+    return this.#mutate(nodeId, async (adapter) => {
+      if (!adapter.deleteClient)
+        throw new Error('Adapter cannot delete clients');
+      return adapter.deleteClient(remoteClientId);
+    });
+  }
+
   delete(nodeId: string): void {
     this.#requireRow(nodeId);
     const placement = this.connection.sqlite
@@ -633,6 +705,49 @@ export class NodeService {
         probe.checkedAt,
         nodeId,
       );
+  }
+
+  async #mutate<T>(
+    nodeId: string,
+    operation: (adapter: ProbeAdapter) => Promise<T>,
+  ): Promise<T> {
+    const row = this.#requireRow(nodeId);
+    if (row.status !== 'healthy' || row.detected_version !== '15.4.0') {
+      throw new NodeMutationError('NODE_NOT_MUTABLE');
+    }
+    const adapter = this.adapterFactory(this.#adapterConnection(row));
+    try {
+      return await operation(adapter);
+    } catch (error) {
+      if (!(error instanceof WgEasyAdapterError)) throw error;
+      const state = mapAdapterFailure(error, this.now().getTime(), {
+        detectedVersion: row.detected_version,
+        mode:
+          row.mode === 'wireguard' || row.mode === 'amnezia' ? row.mode : null,
+      });
+      this.#persistProbeState(nodeId, state);
+      throw new NodeMutationError(state.lastErrorCode ?? 'API_INCOMPATIBLE');
+    }
+  }
+
+  #adapterConnection(row: NodeRow): WgEasyConnection {
+    return {
+      protocol: row.protocol,
+      host: row.host,
+      port: row.port,
+      username: this.cipher.decrypt(
+        row.id,
+        'username',
+        row.username_ciphertext,
+      ),
+      password: this.cipher.decrypt(
+        row.id,
+        'password',
+        row.password_ciphertext,
+      ),
+      allowInsecureTls: row.allow_insecure_tls === 1,
+      timeoutMs: this.requestTimeoutMs,
+    };
   }
 
   async #probe(
