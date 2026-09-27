@@ -81,6 +81,7 @@ export type SubscriptionLink = z.infer<typeof SubscriptionLinkSchema>;
 export type SubscriptionExchangeRequest = z.infer<
   typeof SubscriptionExchangeRequestSchema
 >;
+export type SubscriptionPlacement = z.infer<typeof SubscriptionPlacementSchema>;
 export type SubscriptionSummary = z.infer<typeof SubscriptionSummarySchema>;
 
 const adminErrors = {

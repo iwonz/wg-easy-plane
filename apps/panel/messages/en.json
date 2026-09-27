@@ -219,6 +219,28 @@
       "alt": "Connection QR code for {label}",
       "close": "Close"
     },
+    "subscription": {
+      "open": "Subscription",
+      "title": "Subscription · {name}",
+      "fallback": "Subscription link",
+      "description": "The link grants read-only access to this client's live configurations. Share it only with the intended recipient.",
+      "loading": "Loading subscription link",
+      "failure": "The subscription link could not be updated safely.",
+      "status": {
+        "missing": "Not created",
+        "active": "Active",
+        "revoked": "Revoked"
+      },
+      "prefix": "Token: {prefix}…",
+      "link": "Subscription link",
+      "missing": "Create a link to grant subscription access.",
+      "copied": "Link copied. The full link is kept only while this dialog is open.",
+      "create": "Create link",
+      "rotate": "Rotate link",
+      "revoke": "Revoke",
+      "copy": "Copy",
+      "close": "Close"
+    },
     "drift": {
       "inspect": "Inspect",
       "title": "Placement state · {node}",

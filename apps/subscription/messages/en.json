@@ -8,7 +8,44 @@
   },
   "home": {
     "badge": "Subscription",
-    "title": "Your VPN configurations",
-    "description": "Open a subscription link provided by your administrator to view available configurations."
+    "description": "Choose a node, download its configuration, or scan its QR code in the matching VPN app.",
+    "loading": "Loading your subscription",
+    "exchanging": "Opening your secure subscription",
+    "invalidTitle": "Subscription link unavailable",
+    "invalidDescription": "This link is invalid, expired, or has been revoked.",
+    "invalidHelp": "Ask your administrator for a new subscription link.",
+    "unavailableTitle": "Service temporarily unavailable",
+    "unavailableDescription": "Your subscription could not be loaded safely. Try again shortly.",
+    "retry": "Try again",
+    "logout": "Close subscription",
+    "expires": "Expires: {value}",
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled",
+      "expired": "Expired",
+      "deleting": "Being removed"
+    },
+    "mode": {
+      "wireguard": "WireGuard",
+      "amnezia": "AmneziaWG",
+      "unknown": "VPN type unavailable"
+    },
+    "availability": {
+      "available": "Available",
+      "client_unavailable": "Client unavailable",
+      "node_unavailable": "Node unavailable",
+      "placement_unavailable": "Configuration unavailable"
+    },
+    "placementUnavailable": "This node is visible, but its configuration cannot be retrieved right now.",
+    "emptyTitle": "No nodes assigned",
+    "emptyDescription": "Your administrator has not assigned any VPN nodes to this client yet.",
+    "download": "Download config",
+    "qr": "Show QR",
+    "installApp": "Install app",
+    "qrTitle": "Connect to {node}",
+    "qrDescription": "Scan this code with the matching VPN application. Do not share it.",
+    "qrAlt": "Configuration QR code for {node}",
+    "close": "Close",
+    "privacyNotice": "Configurations and QR codes are retrieved live and are not stored by this portal."
   }
 }

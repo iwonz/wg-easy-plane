@@ -2,6 +2,7 @@
 
 import { Group, SegmentedControl, Select } from '@mantine/core';
 import { useMantineColorScheme } from '@mantine/core';
+import { useMounted } from '@mantine/hooks';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from 'next-intl';
 
@@ -12,6 +13,7 @@ export const ShellControls = observer(function ShellControls() {
   const t = useTranslations('shell');
   const store = useUiStore();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const mounted = useMounted();
 
   const changeLocale = (locale: string | null) => {
     if (locale !== 'en' && locale !== 'ru') return;
@@ -39,7 +41,7 @@ export const ShellControls = observer(function ShellControls() {
           { label: t('system'), value: 'auto' },
         ]}
         onChange={(value) => setColorScheme(value as 'light' | 'dark' | 'auto')}
-        value={colorScheme}
+        value={mounted ? colorScheme : 'auto'}
       />
     </Group>
   );

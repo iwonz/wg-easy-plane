@@ -33,6 +33,8 @@ import { AdvancedPlacementEditor } from './advanced-placement-editor';
 import { DriftResolutionDialog } from './drift-resolution-dialog';
 import { QrCodeDialog } from './qr-code-dialog';
 import type { QrCodeTarget } from './qr-code-dialog';
+import { SubscriptionLinkDialog } from './subscription-link-dialog';
+import type { SubscriptionLinkTarget } from './subscription-link-dialog';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -76,6 +78,8 @@ export const ClientInventory = observer(function ClientInventory() {
   const [adoptionExpiresAt, setAdoptionExpiresAt] = useState('');
   const [adoptionEnabled, setAdoptionEnabled] = useState(true);
   const [qrTarget, setQrTarget] = useState<QrCodeTarget | null>(null);
+  const [subscriptionTarget, setSubscriptionTarget] =
+    useState<SubscriptionLinkTarget | null>(null);
 
   useEffect(() => {
     void store.loadAll();
@@ -241,6 +245,19 @@ export const ClientInventory = observer(function ClientInventory() {
                           </Text>
                         </div>
                         <Group gap="xs">
+                          <Button
+                            size="xs"
+                            variant="light"
+                            onClick={() =>
+                              setSubscriptionTarget({
+                                clientId: client.id,
+                                clientName: client.name,
+                              })
+                            }
+                            disabled={client.lifecycleStatus === 'deleting'}
+                          >
+                            {t('subscription.open')}
+                          </Button>
                           <Button
                             size="xs"
                             variant="light"
@@ -855,6 +872,11 @@ export const ClientInventory = observer(function ClientInventory() {
       />
 
       <QrCodeDialog target={qrTarget} onClose={() => setQrTarget(null)} />
+
+      <SubscriptionLinkDialog
+        target={subscriptionTarget}
+        onClose={() => setSubscriptionTarget(null)}
+      />
     </Paper>
   );
 });
