@@ -16,7 +16,6 @@ import {
   Table,
   Text,
   TextInput,
-  Title,
 } from '@mantine/core';
 import type {
   NodeMetadata,
@@ -29,6 +28,8 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState, type FormEvent } from 'react';
 
 import { NodeStore } from '../stores/node-store';
+import { IconAction } from './icon-action';
+import { IconActivity, IconPencil, IconRefresh, IconTrash } from './icons';
 
 const statusColors: Record<NodeStatus, string> = {
   healthy: 'green',
@@ -163,11 +164,8 @@ export const NodeManagement = observer(function NodeManagement() {
     <>
       <Paper p="xl" radius="lg" shadow="sm" withBorder>
         <Stack gap="lg">
-          <Group justify="space-between" align="flex-start">
-            <div>
-              <Title order={2}>{t('title')}</Title>
-              <Text c="dimmed">{t('description')}</Text>
-            </div>
+          <Group justify="space-between" align="center">
+            <Text c="dimmed">{t('description')}</Text>
             <Button onClick={openCreate}>{t('add')}</Button>
           </Group>
 
@@ -245,37 +243,35 @@ export const NodeManagement = observer(function NodeManagement() {
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs" wrap="nowrap">
-                          <Button
+                          <IconAction
+                            label={t('test')}
                             loading={store.testingNodeId === node.id}
                             onClick={() => void store.retest(node.id)}
-                            size="xs"
                             variant="light"
                           >
-                            {t('test')}
-                          </Button>
-                          <Button
+                            <IconActivity />
+                          </IconAction>
+                          <IconAction
+                            label={t('sync')}
                             loading={store.syncingNodeId === node.id}
                             onClick={() => void store.sync(node.id)}
-                            size="xs"
                             variant="light"
                           >
-                            {t('sync')}
-                          </Button>
-                          <Button
+                            <IconRefresh />
+                          </IconAction>
+                          <IconAction
+                            label={t('edit')}
                             onClick={() => openEdit(node)}
-                            size="xs"
-                            variant="subtle"
                           >
-                            {t('edit')}
-                          </Button>
-                          <Button
+                            <IconPencil />
+                          </IconAction>
+                          <IconAction
                             color="red"
+                            label={t('delete')}
                             onClick={() => setDeleteCandidate(node)}
-                            size="xs"
-                            variant="subtle"
                           >
-                            {t('delete')}
-                          </Button>
+                            <IconTrash />
+                          </IconAction>
                         </Group>
                       </Table.Td>
                     </Table.Tr>

@@ -109,8 +109,9 @@ test.describe.serial('release system journey', () => {
     await page.goto('/');
     await expect(page.getByText('Panel unavailable')).toBeVisible();
     await expect(
-      page.getByRole('img', { name: 'WG Easy Plane' }),
+      page.getByText('WG Easy Plane', { exact: true }),
     ).toBeVisible();
+    await expect(page.locator('header img')).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Use light theme' }),
     ).toBeVisible();
@@ -138,14 +139,18 @@ test.describe.serial('release system journey', () => {
     ).toBeVisible();
     await expect(page.getByText('First run', { exact: true })).toHaveCount(0);
     await expect(
-      page.getByRole('img', { name: 'WG Easy Plane' }),
+      page.getByText('WG Easy Plane', { exact: true }),
     ).toBeVisible();
+    await expect(page.locator('header img')).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/');
 
+    const setupUsername = page.locator('input[autocomplete="username"]');
+    await setupUsername.fill('e2e-admin');
     await page.getByRole('button', { name: 'Switch to Russian' }).click();
     await expect(
       page.getByRole('heading', { name: 'Создание администратора' }),
     ).toBeVisible();
+    await expect(setupUsername).toHaveValue('e2e-admin');
     expect(new URL(page.url()).pathname).toBe('/');
     await page
       .getByRole('button', { name: 'Переключить на английский' })
@@ -166,7 +171,6 @@ test.describe.serial('release system journey', () => {
     );
     await page.getByRole('button', { name: 'Use system theme' }).click();
 
-    await page.getByLabel('Username').fill('e2e-admin');
     await page
       .getByRole('textbox', { name: 'Password' })
       .fill('Synthetic-E2E-Password-2026!');
@@ -177,9 +181,26 @@ test.describe.serial('release system journey', () => {
     );
     await expect(page.getByRole('tab', { name: 'Clients' })).toBeVisible();
     await expect(page.getByText('WG Easy Plane', { exact: true })).toHaveCount(
-      0,
+      1,
+    );
+    await expect(page.getByRole('heading', { name: 'Nodes' })).toHaveCount(0);
+    await expect(page.getByTestId('primary-navigation')).toHaveCSS(
+      'display',
+      'inline-flex',
     );
     expect(tokenListRequests).toHaveLength(0);
+
+    await page.getByRole('button', { name: 'Switch to Russian' }).click();
+    await page.getByRole('button', { name: 'Добавить ноду' }).click();
+    const nodeDialog = page.getByRole('dialog', { name: 'Добавление ноды' });
+    await expect(nodeDialog).toBeVisible();
+    await expect(
+      nodeDialog.getByText('Добавление ноды', { exact: true }),
+    ).toHaveCSS('font-weight', '700');
+    await page.keyboard.press('Escape');
+    await page
+      .getByRole('button', { name: 'Переключить на английский' })
+      .click();
 
     await page.getByRole('button', { name: 'Open profile menu' }).click();
     const profileMenu = page.getByRole('menu');
@@ -188,10 +209,14 @@ test.describe.serial('release system journey', () => {
       'Tokens',
       'Sign out',
     ]);
-    await expect(profileMenu.getByRole('separator')).toHaveCount(1);
+    await expect(profileMenu.getByRole('separator')).toHaveCount(0);
+    await expect(profileMenu.locator('svg')).toHaveCount(2);
     await page.getByRole('menuitem', { name: 'Tokens' }).click();
     const tokensDialog = page.getByRole('dialog', { name: 'API tokens' });
     await expect(tokensDialog).toBeVisible();
+    await expect(
+      tokensDialog.getByText('API tokens', { exact: true }),
+    ).toHaveCSS('font-weight', '700');
     await expect.poll(() => tokenListRequests.length).toBe(1);
     await tokensDialog.getByRole('button', { name: 'Create token' }).click();
     const createTokenDialog = page.getByRole('dialog', {
@@ -238,7 +263,11 @@ test.describe.serial('release system journey', () => {
     expect(second.body?.status).toBe('healthy');
 
     await page.reload();
+    await expect(
+      page.getByRole('button', { name: 'Retest' }).first(),
+    ).toHaveText('');
     await page.getByRole('tab', { name: 'Clients' }).click();
+    await expect(page.getByRole('heading', { name: 'Clients' })).toHaveCount(0);
     await expect(
       page.getByText('shared-synthetic-client', { exact: true }),
     ).toHaveCount(2);
@@ -275,6 +304,9 @@ test.describe.serial('release system journey', () => {
     await expect(
       page.getByRole('button', { name: 'Subscription' }),
     ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Subscription' })).toHaveText(
+      '',
+    );
 
     await expectNoSeriousAxeViolations(page);
   });
@@ -324,10 +356,21 @@ test.describe.serial('release system journey', () => {
       2,
     );
 
+    await page.evaluate(() => {
+      (window as Window & { __wgepLocaleMarker?: string }).__wgepLocaleMarker =
+        'preserved';
+    });
     await page
       .getByRole('button', { name: 'Переключить на английский' })
       .click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    expect(
+      await page.evaluate(
+        () =>
+          (window as Window & { __wgepLocaleMarker?: string })
+            .__wgepLocaleMarker,
+      ),
+    ).toBe('preserved');
     expect(new URL(page.url()).pathname).toBe('/');
     await page.getByRole('button', { name: 'Switch to Russian' }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
@@ -412,7 +455,7 @@ test.describe.serial('release system journey', () => {
   test('falls back to English without locale-prefixed routes', async () => {
     const context = await browser.newContext({ locale: 'fr-FR' });
     const page = await context.newPage();
-    const response = await page.goto('http://localhost:3001/');
+    const response = await page.goto(process.env.SUBSCRIPTION_PUBLIC_URL!);
     expect(response).not.toBeNull();
     expectSecurityHeaders(response!.headers());
     await expect(
@@ -433,7 +476,7 @@ test.describe.serial('release system journey', () => {
       panelPage.getByRole('heading', { name: 'Sign in' }),
     ).toBeVisible();
     await expect(
-      panelPage.getByRole('img', { name: 'WG Easy Plane' }),
+      panelPage.getByText('WG Easy Plane', { exact: true }),
     ).toBeVisible();
     await expect(
       panelPage.getByRole('button', { name: 'Open profile menu' }),

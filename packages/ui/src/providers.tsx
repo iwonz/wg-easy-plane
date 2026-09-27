@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   defaultCssVariablesResolver,
   MantineProvider,
   type CSSVariablesResolver,
 } from '@mantine/core';
 import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl';
+import { observer } from 'mobx-react-lite';
 
 import { createUiStore, UiStoreContext } from './store';
 import { theme } from './theme';
@@ -15,7 +16,11 @@ import type { AppLocale } from './types';
 type ApplicationProvidersProps = {
   children: ReactNode;
   locale: AppLocale;
-  messages: AbstractIntlMessages;
+  messages: Record<AppLocale, AbstractIntlMessages>;
+};
+
+type LocalizedIntlProviderProps = ApplicationProvidersProps & {
+  store: ReturnType<typeof createUiStore>;
 };
 
 const cssVariablesResolver: CSSVariablesResolver = (resolvedTheme) => {
@@ -42,8 +47,8 @@ export function ApplicationProviders({
   const [store] = useState(() => createUiStore(locale));
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
-      <UiStoreContext.Provider value={store}>
+    <UiStoreContext.Provider value={store}>
+      <LocalizedIntlProvider locale={locale} messages={messages} store={store}>
         <MantineProvider
           cssVariablesResolver={cssVariablesResolver}
           defaultColorScheme="auto"
@@ -51,7 +56,27 @@ export function ApplicationProviders({
         >
           {children}
         </MantineProvider>
-      </UiStoreContext.Provider>
-    </NextIntlClientProvider>
+      </LocalizedIntlProvider>
+    </UiStoreContext.Provider>
   );
 }
+
+const LocalizedIntlProvider = observer(function LocalizedIntlProvider({
+  children,
+  messages,
+  store,
+}: LocalizedIntlProviderProps) {
+  useEffect(() => {
+    document.documentElement.lang = store.locale;
+  }, [store.locale]);
+
+  return (
+    <NextIntlClientProvider
+      locale={store.locale}
+      messages={messages[store.locale]}
+      timeZone="UTC"
+    >
+      {children}
+    </NextIntlClientProvider>
+  );
+});

@@ -19,7 +19,10 @@ export default async function RootLayout({
     cookieStore.get('locale')?.value,
     headerStore.get('accept-language'),
   );
-  const messages = (await import(`../messages/${locale}.json`)).default;
+  const [englishMessages, russianMessages] = await Promise.all([
+    import('../messages/en.json'),
+    import('../messages/ru.json'),
+  ]);
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -27,7 +30,13 @@ export default async function RootLayout({
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>
       <body>
-        <ApplicationProviders locale={locale} messages={messages}>
+        <ApplicationProviders
+          locale={locale}
+          messages={{
+            en: englishMessages.default,
+            ru: russianMessages.default,
+          }}
+        >
           {children}
         </ApplicationProviders>
       </body>

@@ -16,6 +16,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
+import { segmentedTabsStyles } from '@wg-easy-plane/ui';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from 'next-intl';
 
@@ -76,8 +77,13 @@ export const AuthGate = observer(function AuthGate() {
   } else if (store.state === 'authenticated' && store.admin) {
     content = (
       <>
-        <Tabs defaultValue="nodes" keepMounted={false}>
-          <Tabs.List>
+        <Tabs
+          defaultValue="nodes"
+          keepMounted={false}
+          styles={segmentedTabsStyles}
+          variant="pills"
+        >
+          <Tabs.List data-testid="primary-navigation">
             <Tabs.Tab value="nodes">{t('navigation.nodes')}</Tabs.Tab>
             <Tabs.Tab value="clients">{t('navigation.clients')}</Tabs.Tab>
           </Tabs.List>

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev --port 3000",
-    "start": "next start --port 3000",
+    "start": "node ../../scripts/start-standalone.mjs panel",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

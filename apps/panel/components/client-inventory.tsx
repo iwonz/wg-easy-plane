@@ -16,7 +16,6 @@ import {
   Tabs,
   Text,
   TextInput,
-  Title,
 } from '@mantine/core';
 import type {
   AmbiguousCreateCandidate,
@@ -24,6 +23,7 @@ import type {
   ManagedClient,
   ManagedPlacement,
 } from '@wg-easy-plane/contracts';
+import { segmentedTabsStyles } from '@wg-easy-plane/ui';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
@@ -31,6 +31,20 @@ import { useEffect, useState } from 'react';
 import { InventoryStore } from '../stores/inventory-store';
 import { AdvancedPlacementEditor } from './advanced-placement-editor';
 import { DriftResolutionDialog } from './drift-resolution-dialog';
+import { IconAction, IconLinkAction } from './icon-action';
+import {
+  IconDownload,
+  IconInspect,
+  IconLink,
+  IconPencil,
+  IconPlus,
+  IconPower,
+  IconQrCode,
+  IconRefresh,
+  IconSliders,
+  IconTrash,
+  IconUnlink,
+} from './icons';
 import { QrCodeDialog } from './qr-code-dialog';
 import type { QrCodeTarget } from './qr-code-dialog';
 import { SubscriptionLinkDialog } from './subscription-link-dialog';
@@ -173,11 +187,8 @@ export const ClientInventory = observer(function ClientInventory() {
   return (
     <Paper p="xl" radius="lg" shadow="sm" withBorder>
       <Stack gap="lg">
-        <Group justify="space-between" align="flex-start">
-          <div>
-            <Title order={2}>{t('title')}</Title>
-            <Text c="dimmed">{t('description')}</Text>
-          </div>
+        <Group justify="space-between" align="center">
+          <Text c="dimmed">{t('description')}</Text>
           <Button
             loading={store.loading || store.managedLoading}
             onClick={() => void store.loadAll()}
@@ -193,7 +204,11 @@ export const ClientInventory = observer(function ClientInventory() {
           </Alert>
         ) : null}
 
-        <Tabs defaultValue="discovered">
+        <Tabs
+          defaultValue="discovered"
+          styles={segmentedTabsStyles}
+          variant="pills"
+        >
           <Tabs.List>
             <Tabs.Tab value="managed">{t('tabs.managed')}</Tabs.Tab>
             <Tabs.Tab value="discovered">{t('tabs.discovered')}</Tabs.Tab>
@@ -245,9 +260,8 @@ export const ClientInventory = observer(function ClientInventory() {
                           </Text>
                         </div>
                         <Group gap="xs">
-                          <Button
-                            size="xs"
-                            variant="light"
+                          <IconAction
+                            label={t('subscription.open')}
                             onClick={() =>
                               setSubscriptionTarget({
                                 clientId: client.id,
@@ -255,20 +269,19 @@ export const ClientInventory = observer(function ClientInventory() {
                               })
                             }
                             disabled={client.lifecycleStatus === 'deleting'}
-                          >
-                            {t('subscription.open')}
-                          </Button>
-                          <Button
-                            size="xs"
                             variant="light"
+                          >
+                            <IconLink />
+                          </IconAction>
+                          <IconAction
+                            label={t('edit')}
                             onClick={() => openEdit(client)}
                             disabled={client.lifecycleStatus === 'deleting'}
                           >
-                            {t('edit')}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="light"
+                            <IconPencil />
+                          </IconAction>
+                          <IconAction
+                            label={client.enabled ? t('disable') : t('enable')}
                             onClick={() =>
                               void store.setManagedEnabled(
                                 client,
@@ -277,26 +290,27 @@ export const ClientInventory = observer(function ClientInventory() {
                             }
                             loading={store.mutating}
                             disabled={client.lifecycleStatus === 'deleting'}
-                          >
-                            {client.enabled ? t('disable') : t('enable')}
-                          </Button>
-                          <Button
-                            size="xs"
                             variant="light"
+                          >
+                            <IconPower />
+                          </IconAction>
+                          <IconAction
+                            label={t('addPlacement')}
                             onClick={() => setPlacementClientId(client.id)}
                             disabled={client.lifecycleStatus === 'deleting'}
-                          >
-                            {t('addPlacement')}
-                          </Button>
-                          <Button
-                            size="xs"
-                            color="red"
                             variant="light"
+                          >
+                            <IconPlus />
+                          </IconAction>
+                          <IconAction
+                            color="red"
+                            label={t('delete')}
                             onClick={() => void store.deleteManaged(client.id)}
                             loading={store.mutating}
+                            variant="light"
                           >
-                            {t('delete')}
-                          </Button>
+                            <IconTrash />
+                          </IconAction>
                         </Group>
                       </Group>
                       <Table.ScrollContainer minWidth={680}>
@@ -344,77 +358,74 @@ export const ClientInventory = observer(function ClientInventory() {
                                       placement.status,
                                     ) ? (
                                       <>
-                                        <Button
-                                          component="a"
+                                        <IconLinkAction
+                                          label={t('delivery.download')}
                                           href={`/api/v1/clients/managed/${client.id}/placements/${placement.id}/configuration`}
                                           download
-                                          size="xs"
-                                          variant="light"
                                         >
-                                          {t('delivery.download')}
-                                        </Button>
-                                        <Button
-                                          size="xs"
-                                          variant="light"
+                                          <IconDownload />
+                                        </IconLinkAction>
+                                        <IconAction
+                                          label={t('delivery.qr')}
                                           onClick={() =>
                                             setQrTarget({
                                               label: `${client.name} · ${placement.nodeName}`,
                                               url: `/api/v1/clients/managed/${client.id}/placements/${placement.id}/qrcode.svg`,
                                             })
                                           }
+                                          variant="light"
                                         >
-                                          {t('delivery.qr')}
-                                        </Button>
+                                          <IconQrCode />
+                                        </IconAction>
                                       </>
                                     ) : null}
                                     {placement.remoteClientId !== null &&
                                     placement.status !== 'ambiguous' &&
                                     placement.status !== 'deleting' &&
                                     placement.status !== 'missing' ? (
-                                      <Button
-                                        size="xs"
-                                        variant="light"
+                                      <IconAction
+                                        label={t('advanced.open')}
                                         onClick={() =>
                                           setAdvancedTarget({
                                             clientId: client.id,
                                             placement,
                                           })
                                         }
+                                        variant="light"
                                       >
-                                        {t('advanced.open')}
-                                      </Button>
+                                        <IconSliders />
+                                      </IconAction>
                                     ) : null}
                                     {placement.status === 'ambiguous' ? (
-                                      <Button
-                                        size="xs"
-                                        variant="light"
+                                      <IconAction
+                                        label={t('resolve')}
                                         onClick={() =>
                                           void openResolution(
                                             client.id,
                                             placement,
                                           )
                                         }
+                                        variant="light"
                                       >
-                                        {t('resolve')}
-                                      </Button>
+                                        <IconLink />
+                                      </IconAction>
                                     ) : placement.status === 'drift' ||
                                       placement.status === 'missing' ? (
-                                      <Button
-                                        size="xs"
-                                        variant="light"
+                                      <IconAction
+                                        label={t('drift.inspect')}
                                         onClick={() =>
                                           setDriftTarget({
                                             clientId: client.id,
                                             placement,
                                           })
                                         }
-                                      >
-                                        {t('drift.inspect')}
-                                      </Button>
-                                    ) : placement.status !== 'active' ? (
-                                      <Button
-                                        size="xs"
                                         variant="light"
+                                      >
+                                        <IconInspect />
+                                      </IconAction>
+                                    ) : placement.status !== 'active' ? (
+                                      <IconAction
+                                        label={t('retry')}
                                         onClick={() =>
                                           void store.retryPlacement(
                                             client.id,
@@ -422,16 +433,16 @@ export const ClientInventory = observer(function ClientInventory() {
                                           )
                                         }
                                         loading={store.mutating}
+                                        variant="light"
                                       >
-                                        {t('retry')}
-                                      </Button>
+                                        <IconRefresh />
+                                      </IconAction>
                                     ) : null}
                                     {client.lifecycleStatus === 'active' &&
                                     placement.status !== 'ambiguous' ? (
-                                      <Button
-                                        size="xs"
+                                      <IconAction
                                         color="red"
-                                        variant="subtle"
+                                        label={t('removePlacement')}
                                         onClick={() =>
                                           void store.removePlacement(
                                             client.id,
@@ -440,8 +451,8 @@ export const ClientInventory = observer(function ClientInventory() {
                                         }
                                         loading={store.mutating}
                                       >
-                                        {t('removePlacement')}
-                                      </Button>
+                                        <IconUnlink />
+                                      </IconAction>
                                     ) : null}
                                   </Group>
                                 </Table.Td>
@@ -558,27 +569,25 @@ export const ClientInventory = observer(function ClientInventory() {
                           <Table.Td>
                             {item.missingAt === null ? (
                               <Group gap="xs">
-                                <Button
-                                  component="a"
+                                <IconLinkAction
+                                  label={t('delivery.download')}
                                   href={`/api/v1/clients/discovered/${item.nodeId}/${item.remoteClientId}/configuration`}
                                   download
-                                  size="xs"
-                                  variant="light"
                                 >
-                                  {t('delivery.download')}
-                                </Button>
-                                <Button
-                                  size="xs"
-                                  variant="light"
+                                  <IconDownload />
+                                </IconLinkAction>
+                                <IconAction
+                                  label={t('delivery.qr')}
                                   onClick={() =>
                                     setQrTarget({
                                       label: `${item.publicData.name} · ${item.nodeName}`,
                                       url: `/api/v1/clients/discovered/${item.nodeId}/${item.remoteClientId}/qrcode.svg`,
                                     })
                                   }
+                                  variant="light"
                                 >
-                                  {t('delivery.qr')}
-                                </Button>
+                                  <IconQrCode />
+                                </IconAction>
                               </Group>
                             ) : null}
                           </Table.Td>

@@ -103,7 +103,6 @@ export const ShellControls = observer(function ShellControls() {
     const locale = nextLocale(store.locale);
     document.cookie = `locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
     store.setLocale(locale);
-    window.location.reload();
   };
 
   const selectedColorScheme = mounted ? colorScheme : 'auto';

@@ -1,4 +1,20 @@
-import { createTheme } from '@mantine/core';
+import { createTheme, type TabsProps } from '@mantine/core';
+
+export const segmentedTabsStyles: TabsProps['styles'] = {
+  list: {
+    display: 'inline-flex',
+    gap: 0,
+    padding: 3,
+    width: 'fit-content',
+    border: '1px solid var(--mantine-color-default-border)',
+    borderRadius: 'var(--mantine-radius-md)',
+    background: 'var(--mantine-color-default-hover)',
+  },
+  tab: {
+    borderRadius: 'calc(var(--mantine-radius-md) - 3px)',
+    fontWeight: 600,
+  },
+};
 
 export const theme = createTheme({
   autoContrast: true,
@@ -35,5 +51,12 @@ export const theme = createTheme({
   },
   headings: {
     fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+  },
+  components: {
+    Modal: {
+      styles: {
+        title: { fontWeight: 700 },
+      },
+    },
   },
 });
