@@ -46,10 +46,10 @@ function insertNode(
     .prepare(
       `insert into nodes
        (id, name, protocol, host, port, username_ciphertext,
-        password_ciphertext, allow_insecure_tls, status, detected_version,
+        password_ciphertext, status, detected_version,
         mode, last_checked_at, last_synced_at, last_error_code,
         created_at, updated_at)
-       values (?, ?, 'https', ?, 51821, 'cipher-user', 'cipher-password', 0,
+       values (?, ?, 'https', ?, 51821, 'cipher-user', 'cipher-password',
          'healthy', '15.4.0', 'wireguard', ?, null, null, ?, ?)`,
     )
     .run(id, name, `node-${index}.example.test`, START, START, START);
@@ -101,7 +101,6 @@ function nodeMetadata(id: string): NodeMetadata {
     protocol: 'https',
     host: 'node.example.test',
     port: 51821,
-    allowInsecureTls: false,
     status: 'healthy',
     detectedVersion: '15.4.0',
     mode: 'wireguard',

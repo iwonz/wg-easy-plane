@@ -50,6 +50,7 @@ describe('generated API client artifacts', () => {
     }
     expect(source).not.toContain('tokenHash');
     expect(source).not.toContain('token_hash');
+    expect(source).not.toContain('allowInsecureTls');
   });
 
   it('keeps node credentials out of response metadata', async () => {
@@ -59,6 +60,9 @@ describe('generated API client artifacts', () => {
       components: {
         schemas: {
           NodeMetadata: { properties: Record<string, unknown> };
+          CreateNodeRequest: { properties: Record<string, unknown> };
+          TestNodeConnectionRequest: { properties: Record<string, unknown> };
+          UpdateNodeRequest: { properties: Record<string, unknown> };
         };
       };
     };
@@ -68,6 +72,16 @@ describe('generated API client artifacts', () => {
     expect(properties).not.toHaveProperty('password');
     expect(properties).not.toHaveProperty('usernameCiphertext');
     expect(properties).not.toHaveProperty('passwordCiphertext');
+    expect(properties).not.toHaveProperty('allowInsecureTls');
+    expect(
+      document.components.schemas.CreateNodeRequest.properties,
+    ).not.toHaveProperty('allowInsecureTls');
+    expect(
+      document.components.schemas.TestNodeConnectionRequest.properties,
+    ).not.toHaveProperty('allowInsecureTls');
+    expect(
+      document.components.schemas.UpdateNodeRequest.properties,
+    ).not.toHaveProperty('allowInsecureTls');
   });
 
   it('keeps upstream secrets and delivery payloads out of discovered clients', async () => {

@@ -68,9 +68,9 @@ function insertNode(
     .prepare(
       `insert into nodes
        (id, name, protocol, host, port, username_ciphertext, password_ciphertext,
-        allow_insecure_tls, status, detected_version, mode, last_checked_at,
+        status, detected_version, mode, last_checked_at,
         last_synced_at, last_error_code, created_at, updated_at)
-       values (?, ?, 'https', ?, 51821, 'ciphertext', 'ciphertext', 0,
+       values (?, ?, 'https', ?, 51821, 'ciphertext', 'ciphertext',
                'healthy', '15.4.0', 'wireguard', ?, null, null, ?, ?)`,
     )
     .run(

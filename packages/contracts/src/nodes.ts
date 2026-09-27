@@ -115,35 +115,15 @@ const NodeConnectionFieldsSchema = z.object({
       { message: 'Username contains unsupported characters' },
     ),
   password: z.string().min(1).max(1_024),
-  allowInsecureTls: z.boolean().default(false),
 });
 
 export const TestNodeConnectionRequestSchema =
-  NodeConnectionFieldsSchema.strict()
-    .superRefine((value, context) => {
-      if (value.protocol === 'http' && value.allowInsecureTls) {
-        context.addIssue({
-          code: 'custom',
-          path: ['allowInsecureTls'],
-          message: 'Insecure TLS can only be enabled for HTTPS',
-        });
-      }
-    })
-    .openapi('TestNodeConnectionRequest');
+  NodeConnectionFieldsSchema.strict().openapi('TestNodeConnectionRequest');
 
 export const CreateNodeRequestSchema = NodeConnectionFieldsSchema.extend({
   name: z.string().trim().min(1).max(80),
 })
   .strict()
-  .superRefine((value, context) => {
-    if (value.protocol === 'http' && value.allowInsecureTls) {
-      context.addIssue({
-        code: 'custom',
-        path: ['allowInsecureTls'],
-        message: 'Insecure TLS can only be enabled for HTTPS',
-      });
-    }
-  })
   .openapi('CreateNodeRequest');
 
 export const UpdateNodeRequestSchema = z
@@ -162,7 +142,6 @@ export const UpdateNodeRequestSchema = z
       )
       .optional(),
     password: z.string().min(1).max(1_024).optional(),
-    allowInsecureTls: z.boolean().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
@@ -177,7 +156,6 @@ export const NodeMetadataSchema = z
     protocol: NodeProtocolSchema,
     host: NodeHostSchema,
     port: z.number().int(),
-    allowInsecureTls: z.boolean(),
     status: NodeStatusSchema,
     detectedVersion: z.string().nullable(),
     mode: NodeModeSchema.nullable(),

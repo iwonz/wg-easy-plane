@@ -30,11 +30,11 @@ function createFixture() {
     .prepare(
       `insert into nodes
        (id, name, protocol, host, port, username_ciphertext,
-        password_ciphertext, allow_insecure_tls, status, detected_version,
+        password_ciphertext, status, detected_version,
         mode, last_checked_at, last_synced_at, last_error_code,
         created_at, updated_at)
        values (?, 'Synthetic node', 'https', 'node.example.test', 443,
-               'encrypted-user', 'encrypted-password', 0, 'healthy', '15.4.0',
+               'encrypted-user', 'encrypted-password', 'healthy', '15.4.0',
                'wireguard', ?, ?, null, ?, ?)`,
     )
     .run(NODE_ID, NOW, NOW, NOW, NOW);

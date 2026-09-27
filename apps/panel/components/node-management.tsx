@@ -13,7 +13,6 @@ import {
   PasswordInput,
   Select,
   Stack,
-  Switch,
   Table,
   Text,
   TextInput,
@@ -70,7 +69,6 @@ export const NodeManagement = observer(function NodeManagement() {
   const [port, setPort] = useState<string | number>(51821);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [allowInsecureTls, setAllowInsecureTls] = useState(false);
 
   useEffect(() => {
     void store.load();
@@ -94,7 +92,6 @@ export const NodeManagement = observer(function NodeManagement() {
     setProtocol('https');
     setHost('');
     setPort(51821);
-    setAllowInsecureTls(false);
     clearCredentials();
     store.clearTestResult();
     setEditorOpened(true);
@@ -106,7 +103,6 @@ export const NodeManagement = observer(function NodeManagement() {
     setProtocol(node.protocol);
     setHost(node.host);
     setPort(node.port);
-    setAllowInsecureTls(node.allowInsecureTls);
     clearCredentials();
     store.clearTestResult();
     setEditorOpened(true);
@@ -122,9 +118,6 @@ export const NodeManagement = observer(function NodeManagement() {
       if (protocol !== editing.protocol) update.protocol = protocol;
       if (host.trim() !== editing.host) update.host = host;
       if (numericPort !== editing.port) update.port = numericPort;
-      if (allowInsecureTls !== editing.allowInsecureTls) {
-        update.allowInsecureTls = allowInsecureTls;
-      }
       if (username) update.username = username;
       if (password) update.password = password;
       success =
@@ -138,7 +131,6 @@ export const NodeManagement = observer(function NodeManagement() {
         port: numericPort,
         username,
         password,
-        allowInsecureTls,
       });
     }
     clearCredentials();
@@ -152,7 +144,6 @@ export const NodeManagement = observer(function NodeManagement() {
       port: Number(port),
       username,
       password,
-      allowInsecureTls,
     });
     clearCredentials();
   };
@@ -162,7 +153,6 @@ export const NodeManagement = observer(function NodeManagement() {
     if (await store.delete(deleteCandidate.id)) setDeleteCandidate(null);
   };
 
-  const hasInsecureNode = store.items.some((node) => node.allowInsecureTls);
   const hasCompatibilityIssue = store.items.some(
     (node) =>
       node.status === 'unsupported_version' ||
@@ -184,12 +174,6 @@ export const NodeManagement = observer(function NodeManagement() {
           {hasCompatibilityIssue ? (
             <Alert color="orange" title={t('compatibilityGlobalTitle')}>
               {t('compatibilityGlobalDescription')}
-            </Alert>
-          ) : null}
-
-          {hasInsecureNode ? (
-            <Alert color="orange" title={t('insecureGlobalTitle')}>
-              {t('insecureGlobalDescription')}
             </Alert>
           ) : null}
 
@@ -222,14 +206,7 @@ export const NodeManagement = observer(function NodeManagement() {
                   {store.items.map((node) => (
                     <Table.Tr key={node.id}>
                       <Table.Td>
-                        <Stack gap={4}>
-                          <Text fw={600}>{node.name}</Text>
-                          {node.allowInsecureTls ? (
-                            <Badge color="orange" size="sm" variant="light">
-                              {t('insecureBadge')}
-                            </Badge>
-                          ) : null}
-                        </Stack>
+                        <Text fw={600}>{node.name}</Text>
                       </Table.Td>
                       <Table.Td>
                         <Code>{endpoint(node)}</Code>
@@ -346,11 +323,9 @@ export const NodeManagement = observer(function NodeManagement() {
                 { value: 'http', label: 'HTTP' },
               ]}
               label={t('fields.protocol')}
-              onChange={(value) => {
-                const next = value === 'http' ? 'http' : 'https';
-                setProtocol(next);
-                if (next === 'http') setAllowInsecureTls(false);
-              }}
+              onChange={(value) =>
+                setProtocol(value === 'http' ? 'http' : 'https')
+              }
               value={protocol}
             />
             <TextInput
@@ -390,19 +365,6 @@ export const NodeManagement = observer(function NodeManagement() {
               required={!editing}
               value={password}
             />
-            <Switch
-              checked={allowInsecureTls}
-              disabled={protocol !== 'https'}
-              label={t('fields.allowInsecureTls')}
-              onChange={(event) =>
-                setAllowInsecureTls(event.currentTarget.checked)
-              }
-            />
-            {allowInsecureTls ? (
-              <Alert color="orange" title={t('insecureFormTitle')}>
-                {t('insecureFormDescription')}
-              </Alert>
-            ) : null}
             {store.lastTestResult ? (
               <Alert
                 color={

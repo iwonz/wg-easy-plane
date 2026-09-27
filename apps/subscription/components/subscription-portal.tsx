@@ -60,7 +60,9 @@ export const SubscriptionPortal = observer(function SubscriptionPortal() {
   return (
     <Container size="lg" py="xl">
       <Stack gap="xl">
-        <ShellControls />
+        <Group justify="flex-end">
+          <ShellControls />
+        </Group>
 
         {store.state === 'idle' ||
         store.state === 'loading' ||

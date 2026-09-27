@@ -64,22 +64,21 @@ function requestHostname(hostname: string): string {
     : hostname;
 }
 
-export class NodeHttpTransport implements WgEasyTransport {
-  readonly security: Readonly<{
-    protocol: 'http' | 'https';
-    allowInsecureTls: boolean;
-  }>;
+function tlsRequestOptions(
+  protocol: string,
+): { rejectUnauthorized: true } | object {
+  return protocol === 'https:' ? { rejectUnauthorized: true } : {};
+}
 
+export class NodeHttpTransport implements WgEasyTransport {
   #baseUrl: URL;
   #timeoutMs: number;
   #maxResponseBytes: number;
-  #allowInsecureTls: boolean;
 
   constructor(input: {
     protocol: 'http' | 'https';
     host: string;
     port: number;
-    allowInsecureTls?: boolean;
     timeoutMs?: number;
     maxResponseBytes?: number;
   }) {
@@ -115,11 +114,6 @@ export class NodeHttpTransport implements WgEasyTransport {
     }
     this.#timeoutMs = timeoutMs;
     this.#maxResponseBytes = maxResponseBytes;
-    this.#allowInsecureTls = input.allowInsecureTls ?? false;
-    this.security = Object.freeze({
-      protocol: input.protocol,
-      allowInsecureTls: this.#allowInsecureTls,
-    });
   }
 
   request(input: WgEasyTransportRequest): Promise<WgEasyTransportResponse> {
@@ -165,9 +159,7 @@ export class NodeHttpTransport implements WgEasyTransport {
           path: `${url.pathname}${url.search}`,
           method: input.method,
           headers: input.headers,
-          ...(url.protocol === 'https:'
-            ? { rejectUnauthorized: !this.#allowInsecureTls }
-            : {}),
+          ...tlsRequestOptions(url.protocol),
         },
         (response) => {
           const status = response.statusCode ?? 0;
@@ -255,4 +247,5 @@ export class NodeHttpTransport implements WgEasyTransport {
 export const transportTestExports = {
   mapNetworkFailure,
   requestHostname,
+  tlsRequestOptions,
 };

@@ -27,10 +27,10 @@ function createFixture() {
     .prepare(
       `insert into nodes
        (id, name, protocol, host, port, username_ciphertext,
-        password_ciphertext, allow_insecure_tls, status, detected_version,
+        password_ciphertext, status, detected_version,
         mode, last_checked_at, last_synced_at, last_error_code,
         created_at, updated_at)
-       values (?, ?, 'https', ?, 443, ?, ?, 0, 'healthy', '15.4.0',
+       values (?, ?, 'https', ?, 443, ?, ?, 'healthy', '15.4.0',
                'wireguard', ?, ?, null, ?, ?)`,
     )
     .run(

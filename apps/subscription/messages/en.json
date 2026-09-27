@@ -4,7 +4,12 @@
     "colorScheme": "Color scheme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "switchToEnglish": "Switch to English",
+    "switchToRussian": "Switch to Russian",
+    "switchToLight": "Use light theme",
+    "switchToDark": "Use dark theme",
+    "switchToSystem": "Use system theme"
   },
   "home": {
     "badge": "Subscription",

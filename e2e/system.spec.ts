@@ -99,8 +99,36 @@ test.describe.serial('release system journey', () => {
     await panelContext.close();
   });
 
+  test('keeps the compact panel header visible when authentication is unavailable', async () => {
+    const context = await browser.newContext({ locale: 'en-US' });
+    const page = await context.newPage();
+    await page.route('**/api/v1/auth/setup/status', async (route) => {
+      await route.abort('failed');
+    });
+
+    await page.goto('/');
+    await expect(page.getByText('Panel unavailable')).toBeVisible();
+    await expect(
+      page.getByRole('img', { name: 'WG Easy Plane' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Use light theme' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Switch to Russian' }),
+    ).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await context.close();
+  });
+
   test('onboards one admin and keeps same-name clients distinct across nodes', async () => {
     const page = panelPage;
+    const tokenListRequests: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/api/v1/tokens?')) {
+        tokenListRequests.push(request.url());
+      }
+    });
     const response = await page.goto('/');
     expect(response).not.toBeNull();
     expectSecurityHeaders(response!.headers());
@@ -108,12 +136,79 @@ test.describe.serial('release system journey', () => {
     await expect(
       page.getByRole('heading', { name: 'Create the administrator' }),
     ).toBeVisible();
+    await expect(page.getByText('First run', { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole('img', { name: 'WG Easy Plane' }),
+    ).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe('/');
+
+    await page.getByRole('button', { name: 'Switch to Russian' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Создание администратора' }),
+    ).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe('/');
+    await page
+      .getByRole('button', { name: 'Переключить на английский' })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: 'Create the administrator' }),
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Use light theme' }).click();
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-mantine-color-scheme',
+      'light',
+    );
+    await page.getByRole('button', { name: 'Use dark theme' }).click();
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-mantine-color-scheme',
+      'dark',
+    );
+    await page.getByRole('button', { name: 'Use system theme' }).click();
+
     await page.getByLabel('Username').fill('e2e-admin');
     await page
       .getByRole('textbox', { name: 'Password' })
       .fill('Synthetic-E2E-Password-2026!');
-    await page.getByRole('button', { name: 'Create administrator' }).click();
-    await expect(page.getByText('Signed in as e2e-admin')).toBeVisible();
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+    await expect(page.getByRole('tab', { name: 'Nodes' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.getByRole('tab', { name: 'Clients' })).toBeVisible();
+    await expect(page.getByText('WG Easy Plane', { exact: true })).toHaveCount(
+      0,
+    );
+    expect(tokenListRequests).toHaveLength(0);
+
+    await page.getByRole('button', { name: 'Open profile menu' }).click();
+    const profileMenu = page.getByRole('menu');
+    await expect(profileMenu).toBeVisible();
+    expect(await profileMenu.getByRole('menuitem').allTextContents()).toEqual([
+      'Tokens',
+      'Sign out',
+    ]);
+    await expect(profileMenu.getByRole('separator')).toHaveCount(1);
+    await page.getByRole('menuitem', { name: 'Tokens' }).click();
+    const tokensDialog = page.getByRole('dialog', { name: 'API tokens' });
+    await expect(tokensDialog).toBeVisible();
+    await expect.poll(() => tokenListRequests.length).toBe(1);
+    await tokensDialog.getByRole('button', { name: 'Create token' }).click();
+    const createTokenDialog = page.getByRole('dialog', {
+      name: 'Create API token',
+    });
+    await createTokenDialog.getByLabel('Token name').fill('E2E token');
+    await createTokenDialog.getByLabel('Read nodes').check();
+    await createTokenDialog
+      .getByRole('button', { name: 'Create token' })
+      .click();
+    await expect(page.getByTestId('created-token-secret')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(tokensDialog).not.toBeVisible();
+    await page.getByRole('button', { name: 'Open profile menu' }).click();
+    await page.getByRole('menuitem', { name: 'Tokens' }).click();
+    await expect(page.getByTestId('created-token-secret')).toHaveCount(0);
+    await page.keyboard.press('Escape');
 
     const repeatedSetup = await api(page, 'POST', '/api/v1/auth/setup', {
       username: 'other-admin',
@@ -128,7 +223,6 @@ test.describe.serial('release system journey', () => {
       port: 39_010,
       username: 'synthetic-admin',
       password: 'synthetic-node-password',
-      allowInsecureTls: false,
     });
     const second = await api<NodeResult>(page, 'POST', '/api/v1/nodes', {
       name: 'Synthetic AmneziaWG',
@@ -137,7 +231,6 @@ test.describe.serial('release system journey', () => {
       port: 39_011,
       username: 'synthetic-admin',
       password: 'synthetic-node-password',
-      allowInsecureTls: false,
     });
     expect(first.status).toBe(201);
     expect(second.status).toBe(201);
@@ -145,6 +238,7 @@ test.describe.serial('release system journey', () => {
     expect(second.body?.status).toBe('healthy');
 
     await page.reload();
+    await page.getByRole('tab', { name: 'Clients' }).click();
     await expect(
       page.getByText('shared-synthetic-client', { exact: true }),
     ).toHaveCount(2);
@@ -173,6 +267,7 @@ test.describe.serial('release system journey', () => {
     managed = created.body!;
 
     await page.reload();
+    await page.getByRole('tab', { name: 'Clients' }).click();
     await page.getByRole('tab', { name: 'Managed' }).click();
     await expect(
       page.getByText('managed-e2e-client', { exact: true }),
@@ -181,12 +276,6 @@ test.describe.serial('release system journey', () => {
       page.getByRole('button', { name: 'Subscription' }),
     ).toBeVisible();
 
-    await page.getByText('Dark', { exact: true }).click();
-    await expect(page.locator('html')).toHaveAttribute(
-      'data-mantine-color-scheme',
-      'dark',
-    );
-    await page.getByText('System', { exact: true }).click();
     await expectNoSeriousAxeViolations(page);
   });
 
@@ -235,6 +324,14 @@ test.describe.serial('release system journey', () => {
       2,
     );
 
+    await page
+      .getByRole('button', { name: 'Переключить на английский' })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    expect(new URL(page.url()).pathname).toBe('/');
+    await page.getByRole('button', { name: 'Switch to Russian' }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+
     expect(requestUrls.some((url) => url.includes(token))).toBe(false);
     const storageContainsToken = await page.evaluate((credential) => {
       const values = [
@@ -279,11 +376,19 @@ test.describe.serial('release system journey', () => {
 
     const rootResponse = await page.request.get(subscriptionUrl.origin);
     expectSecurityHeaders(rootResponse.headers());
-    await page.getByText('Тёмная', { exact: true }).click();
+    await page.getByRole('button', { name: 'Включить светлую тему' }).click();
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-mantine-color-scheme',
+      'light',
+    );
+    await page.getByRole('button', { name: 'Включить тёмную тему' }).click();
     await expect(page.locator('html')).toHaveAttribute(
       'data-mantine-color-scheme',
       'dark',
     );
+    await page
+      .getByRole('button', { name: 'Использовать системную тему' })
+      .click();
     await expectNoSeriousAxeViolations(page);
 
     const revoked = await api(
@@ -317,5 +422,22 @@ test.describe.serial('release system journey', () => {
     expect(new URL(page.url()).pathname).toBe('/');
     await expectNoSeriousAxeViolations(page);
     await context.close();
+  });
+
+  test('logs out from the exact profile menu and keeps the login header', async () => {
+    await panelPage.goto('/');
+    await panelPage.getByRole('button', { name: 'Open profile menu' }).click();
+    await panelPage.getByRole('menuitem', { name: 'Sign out' }).click();
+
+    await expect(
+      panelPage.getByRole('heading', { name: 'Sign in' }),
+    ).toBeVisible();
+    await expect(
+      panelPage.getByRole('img', { name: 'WG Easy Plane' }),
+    ).toBeVisible();
+    await expect(
+      panelPage.getByRole('button', { name: 'Open profile menu' }),
+    ).toHaveCount(0);
+    await expectNoSeriousAxeViolations(panelPage);
   });
 });

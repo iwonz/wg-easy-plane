@@ -4,7 +4,12 @@
     "colorScheme": "Цветовая схема",
     "light": "Светлая",
     "dark": "Тёмная",
-    "system": "Системная"
+    "system": "Системная",
+    "switchToEnglish": "Переключить на английский",
+    "switchToRussian": "Переключить на русский",
+    "switchToLight": "Включить светлую тему",
+    "switchToDark": "Включить тёмную тему",
+    "switchToSystem": "Использовать системную тему"
   },
   "home": {
     "badge": "Подписка",

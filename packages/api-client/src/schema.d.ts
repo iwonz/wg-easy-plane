@@ -864,7 +864,6 @@ export interface components {
       protocol: components['schemas']['NodeProtocol'];
       host: components['schemas']['NodeHost'];
       port: number;
-      allowInsecureTls: boolean;
       status: components['schemas']['NodeStatus'];
       detectedVersion: string | null;
       mode: components['schemas']['NodeMode'];
@@ -914,8 +913,6 @@ export interface components {
       port: number;
       username: string;
       password: string;
-      /** @default false */
-      allowInsecureTls: boolean;
       name: string;
     };
     NodeConnectionTestResult: {
@@ -932,8 +929,6 @@ export interface components {
       port: number;
       username: string;
       password: string;
-      /** @default false */
-      allowInsecureTls: boolean;
     };
     UpdateNodeRequest: {
       name?: string;
@@ -942,7 +937,6 @@ export interface components {
       port?: number;
       username?: string;
       password?: string;
-      allowInsecureTls?: boolean;
     };
     SyncRunSummary: {
       /** Format: uuid */

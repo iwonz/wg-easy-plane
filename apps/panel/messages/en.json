@@ -4,16 +4,15 @@
     "colorScheme": "Color scheme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
-  },
-  "home": {
-    "badge": "Panel",
-    "title": "WG Easy Plane",
-    "description": "Manage wg-easy nodes and scoped automation access from this control plane."
+    "system": "System",
+    "switchToEnglish": "Switch to English",
+    "switchToRussian": "Switch to Russian",
+    "switchToLight": "Use light theme",
+    "switchToDark": "Use dark theme",
+    "switchToSystem": "Use system theme"
   },
   "auth": {
     "loading": "Loading authentication state",
-    "setupBadge": "First run",
     "setupTitle": "Create the administrator",
     "setupDescription": "This is the only administrator account for this panel.",
     "loginBadge": "Administrator",
@@ -22,15 +21,20 @@
     "username": "Username",
     "password": "Password",
     "passwordHint": "Use 12 to 128 characters.",
-    "createAdmin": "Create administrator",
+    "createAdmin": "Create",
     "signIn": "Sign in",
     "logout": "Sign out",
-    "signedInAs": "Signed in as {username}",
+    "tokens": "Tokens",
+    "profileMenu": "Open profile menu",
     "invalidCredentials": "Invalid username or password.",
     "rateLimited": "Too many attempts. Try again later.",
     "requestFailed": "The panel could not complete the authentication request.",
     "unavailableTitle": "Panel unavailable",
     "retry": "Try again"
+  },
+  "navigation": {
+    "nodes": "Nodes",
+    "clients": "Clients"
   },
   "nodes": {
     "title": "Nodes",
@@ -51,13 +55,8 @@
     "loading": "Loading nodes",
     "empty": "No nodes have been added.",
     "loadMore": "Load more",
-    "insecureBadge": "TLS verification off",
-    "insecureGlobalTitle": "Insecure TLS is enabled",
-    "insecureGlobalDescription": "At least one node accepts an unverified TLS certificate. Review this exception regularly.",
     "compatibilityGlobalTitle": "Client mutations are blocked",
     "compatibilityGlobalDescription": "At least one node has an unsupported wg-easy version or incompatible API. Its last safe inventory remains available.",
-    "insecureFormTitle": "Certificate verification will be disabled",
-    "insecureFormDescription": "Use this only for a node you control. A network attacker could impersonate the node.",
     "testVersion": "Detected wg-easy {version}.",
     "testNoVersion": "No compatible wg-easy version could be confirmed.",
     "checkedAt": "Checked: {value}",
@@ -78,8 +77,7 @@
       "port": "Port",
       "username": "wg-easy username",
       "password": "wg-easy password",
-      "credentialEditHint": "Leave blank to retain the encrypted stored value.",
-      "allowInsecureTls": "Allow an unverified TLS certificate"
+      "credentialEditHint": "Leave blank to retain the encrypted stored value."
     },
     "statuses": {
       "healthy": "Healthy",

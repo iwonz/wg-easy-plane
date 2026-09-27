@@ -21,6 +21,26 @@ function temporaryDatabasePath() {
   return path.join(directory, 'control-plane.sqlite');
 }
 
+function versionOneMigrationsFolder(databasePath: string): string {
+  const source = resolveDefaultMigrationsFolder(process.cwd());
+  const target = path.join(path.dirname(databasePath), 'v1-migrations');
+  fs.mkdirSync(path.join(target, 'meta'), { recursive: true });
+  for (const migration of [
+    '0000_cold_famine.sql',
+    '0001_wealthy_hellion.sql',
+  ]) {
+    fs.copyFileSync(path.join(source, migration), path.join(target, migration));
+  }
+  const journal = JSON.parse(
+    fs.readFileSync(path.join(source, 'meta/_journal.json'), 'utf8'),
+  ) as { entries: unknown[] } & Record<string, unknown>;
+  fs.writeFileSync(
+    path.join(target, 'meta/_journal.json'),
+    JSON.stringify({ ...journal, entries: journal.entries.slice(0, 2) }),
+  );
+  return target;
+}
+
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
     fs.rmSync(directory, { recursive: true, force: true });
@@ -90,6 +110,133 @@ describe('database lifecycle', () => {
     if (process.platform !== 'win32') {
       expect(fs.statSync(result.backupPath!).mode & 0o777).toBe(0o600);
     }
+  });
+
+  it('removes the insecure TLS column and fails legacy exceptions closed without data loss', () => {
+    const databasePath = temporaryDatabasePath();
+    const v1Migrations = versionOneMigrationsFolder(databasePath);
+    migrateDatabase(databasePath, v1Migrations);
+
+    const v1 = openDatabase(databasePath);
+    const timestamp = Date.parse('2026-09-27T10:00:00.000Z');
+    const trustedNodeId = '00000000-0000-4000-8000-000000000001';
+    const insecureNodeId = '00000000-0000-4000-8000-000000000002';
+    const insertNode = v1.sqlite.prepare(
+      `insert into nodes
+       (id, name, protocol, host, port, username_ciphertext,
+        password_ciphertext, allow_insecure_tls, status, detected_version,
+        mode, last_checked_at, last_synced_at, last_error_code,
+        created_at, updated_at)
+       values (?, ?, 'https', ?, 443, 'synthetic-ciphertext',
+               'synthetic-ciphertext', ?, 'healthy', '15.4.0', 'wireguard',
+               ?, ?, null, ?, ?)`,
+    );
+    insertNode.run(
+      trustedNodeId,
+      'Trusted synthetic node',
+      'trusted.example.test',
+      0,
+      timestamp,
+      timestamp,
+      timestamp,
+      timestamp,
+    );
+    insertNode.run(
+      insecureNodeId,
+      'Legacy synthetic node',
+      'legacy.example.test',
+      1,
+      timestamp,
+      timestamp,
+      timestamp,
+      timestamp,
+    );
+    v1.sqlite
+      .prepare(
+        `insert into remote_clients
+         (node_id, remote_client_id, name, public_data, snapshot_hash,
+          upstream_version, first_seen_at, last_seen_at, missing_at)
+         values (?, 7, 'Synthetic remote client', '{}', 'synthetic-hash',
+                 '15.4.0', ?, ?, null)`,
+      )
+      .run(insecureNodeId, timestamp, timestamp);
+    v1.sqlite
+      .prepare(
+        `insert into managed_clients
+         (id, name, expires_at, enabled, lifecycle_status, created_at, updated_at)
+         values ('10000000-0000-4000-8000-000000000001',
+                 'Synthetic managed client', null, 1, 'active', ?, ?)`,
+      )
+      .run(timestamp, timestamp);
+    v1.sqlite
+      .prepare(
+        `insert into placements
+         (id, managed_client_id, node_id, remote_client_id, desired_payload,
+          status, last_error_code, last_attempt_at, created_at, updated_at)
+         values ('20000000-0000-4000-8000-000000000001',
+                 '10000000-0000-4000-8000-000000000001', ?, 7, '{}',
+                 'active', null, ?, ?, ?)`,
+      )
+      .run(insecureNodeId, timestamp, timestamp, timestamp);
+    v1.close();
+
+    const result = migrateDatabase(databasePath);
+    expect(result.migrated).toBe(true);
+    expect(result.backupPath).toMatch(/\.backup-/);
+
+    const migrated = openDatabase(databasePath);
+    const nodeColumns = migrated.sqlite
+      .prepare('pragma table_info(nodes)')
+      .all()
+      .map((column) => (column as { name: string }).name);
+    expect(nodeColumns).not.toContain('allow_insecure_tls');
+    expect(
+      migrated.sqlite
+        .prepare(
+          'select id, status, detected_version, mode, last_synced_at, last_error_code from nodes order by id',
+        )
+        .all(),
+    ).toEqual([
+      {
+        id: trustedNodeId,
+        status: 'healthy',
+        detected_version: '15.4.0',
+        mode: 'wireguard',
+        last_synced_at: timestamp,
+        last_error_code: null,
+      },
+      {
+        id: insecureNodeId,
+        status: 'tls_error',
+        detected_version: '15.4.0',
+        mode: 'wireguard',
+        last_synced_at: timestamp,
+        last_error_code: 'TLS_ERROR',
+      },
+    ]);
+    expect(
+      migrated.sqlite
+        .prepare('select count(*) from remote_clients')
+        .pluck()
+        .get(),
+    ).toBe(1);
+    expect(
+      migrated.sqlite.prepare('select count(*) from placements').pluck().get(),
+    ).toBe(1);
+    expect(migrated.sqlite.pragma('foreign_key_check')).toEqual([]);
+    migrated.close();
+
+    const backup = new BetterSqlite3(result.backupPath!, {
+      readonly: true,
+      fileMustExist: true,
+    });
+    expect(
+      backup
+        .prepare('select allow_insecure_tls from nodes where id = ?')
+        .pluck()
+        .get(insecureNodeId),
+    ).toBe(1);
+    backup.close();
   });
 
   it('applies the initial migration and exposes core tables', () => {

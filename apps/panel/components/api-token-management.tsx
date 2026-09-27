@@ -9,12 +9,11 @@ import {
   Group,
   Loader,
   Modal,
-  Paper,
   Stack,
   Table,
   Text,
   TextInput,
-  Title,
+  useModalsStack,
 } from '@mantine/core';
 import {
   API_TOKEN_SCOPES,
@@ -23,7 +22,7 @@ import {
 } from '@wg-easy-plane/contracts';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 import { ApiTokenStore } from '../stores/api-token-store';
 
@@ -56,10 +55,17 @@ function formatDate(value: string | null): string {
   }).format(new Date(value));
 }
 
-export const ApiTokenManagement = observer(function ApiTokenManagement() {
+type ApiTokenManagementProps = {
+  opened: boolean;
+  onClose: () => void;
+};
+
+export const ApiTokenManagement = observer(function ApiTokenManagement({
+  opened,
+  onClose,
+}: ApiTokenManagementProps) {
   const t = useTranslations('tokens');
   const [store] = useState(() => new ApiTokenStore());
-  const [createOpened, setCreateOpened] = useState(false);
   const [revokeCandidate, setRevokeCandidate] =
     useState<ApiTokenMetadata | null>(null);
   const [name, setName] = useState('');
@@ -68,17 +74,61 @@ export const ApiTokenManagement = observer(function ApiTokenManagement() {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   );
+  const stack = useModalsStack(['tokens', 'create', 'revoke']);
+  const { close, closeAll, open, register } = stack;
+
+  const resetTransientState = useCallback(() => {
+    store.clearSensitiveState();
+    store.clearFailure();
+    setRevokeCandidate(null);
+    setName('');
+    setScopes([]);
+    setExpiration('');
+    setCopyState('idle');
+  }, [store]);
 
   useEffect(() => {
-    void store.load();
-    return () => store.clearSensitiveState();
-  }, [store]);
+    if (opened) {
+      open('tokens');
+      void store.load();
+    } else {
+      closeAll();
+      resetTransientState();
+    }
+  }, [closeAll, open, opened, resetTransientState, store]);
+
+  useEffect(
+    () => () => {
+      store.clearSensitiveState();
+    },
+    [store],
+  );
+
+  const closeManagement = () => {
+    closeAll();
+    resetTransientState();
+    onClose();
+  };
+
+  const closeCreate = () => {
+    close('create');
+    setName('');
+    setScopes([]);
+    setExpiration('');
+    store.clearFailure();
+  };
+
+  const closeRevoke = () => {
+    close('revoke');
+    setRevokeCandidate(null);
+    store.clearFailure();
+  };
 
   const submitCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const expiresAt = expiration ? new Date(expiration).toISOString() : null;
     if (await store.create({ name, scopes, expiresAt })) {
-      setCreateOpened(false);
+      close('create');
       setName('');
       setScopes([]);
       setExpiration('');
@@ -98,19 +148,21 @@ export const ApiTokenManagement = observer(function ApiTokenManagement() {
 
   const confirmRevoke = async () => {
     if (!revokeCandidate) return;
-    if (await store.revoke(revokeCandidate.id)) setRevokeCandidate(null);
+    if (await store.revoke(revokeCandidate.id)) closeRevoke();
   };
 
   return (
-    <>
-      <Paper p="xl" radius="lg" shadow="sm" withBorder>
+    <Modal.Stack>
+      <Modal
+        {...register('tokens')}
+        onClose={closeManagement}
+        size="xl"
+        title={t('title')}
+      >
         <Stack gap="lg">
           <Group justify="space-between" align="flex-start">
-            <div>
-              <Title order={2}>{t('title')}</Title>
-              <Text c="dimmed">{t('description')}</Text>
-            </div>
-            <Button onClick={() => setCreateOpened(true)}>{t('create')}</Button>
+            <Text c="dimmed">{t('description')}</Text>
+            <Button onClick={() => open('create')}>{t('create')}</Button>
           </Group>
 
           {store.created ? (
@@ -202,7 +254,10 @@ export const ApiTokenManagement = observer(function ApiTokenManagement() {
                           <Button
                             color="red"
                             disabled={status === 'revoked'}
-                            onClick={() => setRevokeCandidate(token)}
+                            onClick={() => {
+                              setRevokeCandidate(token);
+                              open('revoke');
+                            }}
                             size="xs"
                             variant="subtle"
                           >
@@ -227,11 +282,11 @@ export const ApiTokenManagement = observer(function ApiTokenManagement() {
             </Button>
           ) : null}
         </Stack>
-      </Paper>
+      </Modal>
 
       <Modal
-        onClose={() => setCreateOpened(false)}
-        opened={createOpened}
+        {...register('create')}
+        onClose={closeCreate}
         title={t('createTitle')}
       >
         <form onSubmit={submitCreate}>
@@ -268,7 +323,7 @@ export const ApiTokenManagement = observer(function ApiTokenManagement() {
               value={expiration}
             />
             <Group justify="flex-end">
-              <Button onClick={() => setCreateOpened(false)} variant="subtle">
+              <Button onClick={closeCreate} variant="subtle">
                 {t('cancel')}
               </Button>
               <Button
@@ -284,8 +339,8 @@ export const ApiTokenManagement = observer(function ApiTokenManagement() {
       </Modal>
 
       <Modal
-        onClose={() => setRevokeCandidate(null)}
-        opened={revokeCandidate !== null}
+        {...register('revoke')}
+        onClose={closeRevoke}
         title={t('revokeTitle')}
       >
         <Stack gap="md">
@@ -293,7 +348,7 @@ export const ApiTokenManagement = observer(function ApiTokenManagement() {
             {t('revokeDescription', { name: revokeCandidate?.name ?? '' })}
           </Text>
           <Group justify="flex-end">
-            <Button onClick={() => setRevokeCandidate(null)} variant="subtle">
+            <Button onClick={closeRevoke} variant="subtle">
               {t('cancel')}
             </Button>
             <Button
@@ -306,6 +361,6 @@ export const ApiTokenManagement = observer(function ApiTokenManagement() {
           </Group>
         </Stack>
       </Modal>
-    </>
+    </Modal.Stack>
   );
 });

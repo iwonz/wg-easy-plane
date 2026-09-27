@@ -49,10 +49,7 @@ describe('NodeHttpTransport', () => {
     expect(response.status).toBe(200);
     expect(new TextDecoder().decode(response.body)).toBe('{"ok":true}');
     expect(JSON.stringify(transport)).not.toContain('127.0.0.1');
-    expect(transport.security).toEqual({
-      protocol: 'http',
-      allowInsecureTls: false,
-    });
+    expect(transport).not.toHaveProperty('security');
   });
 
   it('blocks redirects without contacting their target', async () => {
@@ -115,24 +112,15 @@ describe('NodeHttpTransport', () => {
     ).rejects.toMatchObject({ code: 'RESPONSE_TOO_LARGE' });
   });
 
-  it('keeps insecure TLS per instance and recognizes certificate failures', () => {
-    const trusted = new NodeHttpTransport({
-      protocol: 'https',
-      host: 'example.test',
-      port: 443,
-    });
-    const insecure = new NodeHttpTransport({
-      protocol: 'https',
-      host: 'example.test',
-      port: 443,
-      allowInsecureTls: true,
-    });
+  it('always verifies TLS and recognizes certificate failures', () => {
     const tlsError = Object.assign(new Error('synthetic certificate error'), {
       code: 'DEPTH_ZERO_SELF_SIGNED_CERT',
     });
 
-    expect(trusted.security.allowInsecureTls).toBe(false);
-    expect(insecure.security.allowInsecureTls).toBe(true);
+    expect(transportTestExports.tlsRequestOptions('https:')).toEqual({
+      rejectUnauthorized: true,
+    });
+    expect(transportTestExports.tlsRequestOptions('http:')).toEqual({});
     expect(
       transportTestExports.mapNetworkFailure(tlsError, 'information'),
     ).toMatchObject({ code: 'TLS_ERROR', operation: 'information' });

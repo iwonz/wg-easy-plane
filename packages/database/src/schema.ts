@@ -72,9 +72,6 @@ export const nodes = sqliteTable(
     port: integer('port').notNull(),
     usernameCiphertext: text('username_ciphertext').notNull(),
     passwordCiphertext: text('password_ciphertext').notNull(),
-    allowInsecureTls: integer('allow_insecure_tls', { mode: 'boolean' })
-      .notNull()
-      .default(false),
     status: text('status', {
       enum: [
         'healthy',

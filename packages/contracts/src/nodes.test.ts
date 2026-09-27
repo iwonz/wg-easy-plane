@@ -22,7 +22,6 @@ describe('node contracts', () => {
           port: 51821,
           username: 'synthetic-admin',
           password: 'synthetic-password',
-          allowInsecureTls: false,
         }).success,
       ).toBe(true);
     }
@@ -49,23 +48,32 @@ describe('node contracts', () => {
           port: 51821,
           username: 'synthetic-admin',
           password: 'synthetic-password',
-          allowInsecureTls: false,
         }).success,
       ).toBe(false);
     }
   });
 
-  it('allows insecure TLS only with HTTPS', () => {
+  it('strictly rejects the removed insecure TLS property', () => {
+    const connection = {
+      protocol: 'https' as const,
+      host: 'node.example.test',
+      port: 51821,
+      username: 'synthetic-admin',
+      password: 'synthetic-password',
+      allowInsecureTls: false,
+    };
+
+    expect(TestNodeConnectionRequestSchema.safeParse(connection).success).toBe(
+      false,
+    );
     expect(
       CreateNodeRequestSchema.safeParse({
         name: 'Synthetic node',
-        protocol: 'http',
-        host: 'node.example.test',
-        port: 51821,
-        username: 'synthetic-admin',
-        password: 'synthetic-password',
-        allowInsecureTls: true,
+        ...connection,
       }).success,
+    ).toBe(false);
+    expect(
+      UpdateNodeRequestSchema.safeParse({ allowInsecureTls: false }).success,
     ).toBe(false);
   });
 
@@ -87,7 +95,6 @@ describe('node contracts', () => {
       protocol: 'https',
       host: 'node.example.test',
       port: 51821,
-      allowInsecureTls: false,
       status: 'healthy',
       detectedVersion: '15.4.0',
       mode: 'wireguard',
@@ -102,5 +109,6 @@ describe('node contracts', () => {
     expect(safe).not.toHaveProperty('password');
     expect(safe).not.toHaveProperty('usernameCiphertext');
     expect(safe).not.toHaveProperty('passwordCiphertext');
+    expect(safe).not.toHaveProperty('allowInsecureTls');
   });
 });

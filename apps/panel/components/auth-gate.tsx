@@ -11,11 +11,11 @@ import {
   Paper,
   PasswordInput,
   Stack,
+  Tabs,
   Text,
   TextInput,
   Title,
 } from '@mantine/core';
-import { ShellControls } from '@wg-easy-plane/ui';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from 'next-intl';
 
@@ -23,6 +23,7 @@ import { AuthStore } from '../stores/auth-store';
 import { ApiTokenManagement } from './api-token-management';
 import { ClientInventory } from './client-inventory';
 import { NodeManagement } from './node-management';
+import { PanelHeader } from './panel-header';
 
 function failureKey(failure: AuthStore['failure']) {
   if (failure === 'invalid-credentials') return 'invalidCredentials' as const;
@@ -35,6 +36,7 @@ export const AuthGate = observer(function AuthGate() {
   const [store] = useState(() => new AuthStore());
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [tokensOpened, setTokensOpened] = useState(false);
 
   useEffect(() => {
     void store.initialize();
@@ -46,9 +48,11 @@ export const AuthGate = observer(function AuthGate() {
     if (store.state === 'login') void store.login(username, password);
   };
 
+  let content;
+
   if (store.state === 'loading') {
-    return (
-      <Container size="sm" py="xl">
+    content = (
+      <Container p={0} size="sm" w="100%">
         <Paper p="xl" radius="lg" shadow="sm" withBorder>
           <Group justify="center">
             <Loader aria-label={t('auth.loading')} />
@@ -56,69 +60,50 @@ export const AuthGate = observer(function AuthGate() {
         </Paper>
       </Container>
     );
-  }
-
-  if (store.state === 'error') {
-    return (
-      <Container size="sm" py="xl">
-        <Stack gap="xl">
-          <ShellControls />
-          <Alert color="red" title={t('auth.unavailableTitle')}>
-            <Stack gap="md">
-              <Text>{t('auth.requestFailed')}</Text>
-              <Button onClick={() => void store.initialize()} variant="light">
-                {t('auth.retry')}
-              </Button>
-            </Stack>
-          </Alert>
-        </Stack>
+  } else if (store.state === 'error') {
+    content = (
+      <Container p={0} size="sm" w="100%">
+        <Alert color="red" title={t('auth.unavailableTitle')}>
+          <Stack gap="md">
+            <Text>{t('auth.requestFailed')}</Text>
+            <Button onClick={() => void store.initialize()} variant="light">
+              {t('auth.retry')}
+            </Button>
+          </Stack>
+        </Alert>
       </Container>
     );
-  }
-
-  if (store.state === 'authenticated' && store.admin) {
-    return (
-      <Container size="md" py="xl">
-        <Stack gap="xl">
-          <ShellControls />
-          <Paper p="xl" radius="lg" shadow="sm" withBorder>
-            <Stack gap="md">
-              <Group justify="space-between" align="center">
-                <Badge variant="light">{t('home.badge')}</Badge>
-                <Button
-                  loading={store.submitting}
-                  onClick={() => void store.logout()}
-                  variant="subtle"
-                >
-                  {t('auth.logout')}
-                </Button>
-              </Group>
-              <Title>{t('home.title')}</Title>
-              <Text>
-                {t('auth.signedInAs', { username: store.admin.username })}
-              </Text>
-              <Text c="dimmed">{t('home.description')}</Text>
-            </Stack>
-          </Paper>
-          <NodeManagement />
-          <ClientInventory />
-          <ApiTokenManagement />
-        </Stack>
-      </Container>
+  } else if (store.state === 'authenticated' && store.admin) {
+    content = (
+      <>
+        <Tabs defaultValue="nodes" keepMounted={false}>
+          <Tabs.List>
+            <Tabs.Tab value="nodes">{t('navigation.nodes')}</Tabs.Tab>
+            <Tabs.Tab value="clients">{t('navigation.clients')}</Tabs.Tab>
+          </Tabs.List>
+          <Tabs.Panel pt="xl" value="nodes">
+            <NodeManagement />
+          </Tabs.Panel>
+          <Tabs.Panel pt="xl" value="clients">
+            <ClientInventory />
+          </Tabs.Panel>
+        </Tabs>
+        <ApiTokenManagement
+          onClose={() => setTokensOpened(false)}
+          opened={tokensOpened}
+        />
+      </>
     );
-  }
-
-  const isSetup = store.state === 'setup';
-  return (
-    <Container size="sm" py="xl">
-      <Stack gap="xl">
-        <ShellControls />
+  } else {
+    const isSetup = store.state === 'setup';
+    content = (
+      <Container p={0} size="sm" w="100%">
         <Paper p="xl" radius="lg" shadow="sm" withBorder>
           <form onSubmit={submit}>
             <Stack gap="md">
-              <Badge variant="light">
-                {isSetup ? t('auth.setupBadge') : t('auth.loginBadge')}
-              </Badge>
+              {!isSetup ? (
+                <Badge variant="light">{t('auth.loginBadge')}</Badge>
+              ) : null}
               <Title order={1}>
                 {isSetup ? t('auth.setupTitle') : t('auth.loginTitle')}
               </Title>
@@ -158,6 +143,26 @@ export const AuthGate = observer(function AuthGate() {
             </Stack>
           </form>
         </Paper>
+      </Container>
+    );
+  }
+
+  const authenticatedAdmin =
+    store.state === 'authenticated' ? store.admin : null;
+
+  return (
+    <Container py="md" size="xl">
+      <Stack gap="xl">
+        <PanelHeader
+          loggingOut={store.submitting}
+          onLogout={() => {
+            setTokensOpened(false);
+            void store.logout();
+          }}
+          onOpenTokens={() => setTokensOpened(true)}
+          username={authenticatedAdmin?.username}
+        />
+        {content}
       </Stack>
     </Container>
   );

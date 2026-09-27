@@ -9,7 +9,6 @@ const node: NodeMetadata = {
   protocol: 'https',
   host: 'node.example.test',
   port: 51821,
-  allowInsecureTls: false,
   status: 'healthy',
   detectedVersion: '15.4.0',
   mode: 'wireguard',
@@ -26,7 +25,6 @@ const connection = {
   port: 51821,
   username: 'synthetic-admin',
   password: 'synthetic-password',
-  allowInsecureTls: false,
 };
 
 describe('NodeStore', () => {

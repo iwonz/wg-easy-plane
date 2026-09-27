@@ -26,7 +26,6 @@ export type WgEasyConnection = {
   port: number;
   username: string;
   password: string;
-  allowInsecureTls?: boolean;
   timeoutMs?: number;
   maxResponseBytes?: number;
 };
@@ -112,11 +111,6 @@ function normalizedVersion(release: string): string {
 }
 
 export class WgEasyAdapter {
-  readonly connectionSecurity: Readonly<{
-    protocol: 'http' | 'https';
-    allowInsecureTls: boolean;
-  }>;
-
   #username: string;
   #password: string;
   #transport: WgEasyTransport;
@@ -135,17 +129,12 @@ export class WgEasyAdapter {
     }
     this.#username = connection.username;
     this.#password = connection.password;
-    this.connectionSecurity = Object.freeze({
-      protocol: connection.protocol,
-      allowInsecureTls: connection.allowInsecureTls ?? false,
-    });
     this.#transport =
       options.transport ??
       new NodeHttpTransport({
         protocol: connection.protocol,
         host: connection.host,
         port: connection.port,
-        allowInsecureTls: connection.allowInsecureTls,
         timeoutMs: connection.timeoutMs,
         maxResponseBytes: connection.maxResponseBytes,
       });

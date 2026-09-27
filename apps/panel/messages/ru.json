@@ -4,16 +4,15 @@
     "colorScheme": "Цветовая схема",
     "light": "Светлая",
     "dark": "Тёмная",
-    "system": "Системная"
-  },
-  "home": {
-    "badge": "Панель",
-    "title": "WG Easy Plane",
-    "description": "Управляйте нодами wg-easy и доступом автоматизации из этой control plane."
+    "system": "Системная",
+    "switchToEnglish": "Переключить на английский",
+    "switchToRussian": "Переключить на русский",
+    "switchToLight": "Включить светлую тему",
+    "switchToDark": "Включить тёмную тему",
+    "switchToSystem": "Использовать системную тему"
   },
   "auth": {
     "loading": "Загрузка состояния авторизации",
-    "setupBadge": "Первый запуск",
     "setupTitle": "Создание администратора",
     "setupDescription": "Это единственная учётная запись администратора этой панели.",
     "loginBadge": "Администратор",
@@ -22,15 +21,20 @@
     "username": "Имя пользователя",
     "password": "Пароль",
     "passwordHint": "Используйте от 12 до 128 символов.",
-    "createAdmin": "Создать администратора",
+    "createAdmin": "Создать",
     "signIn": "Войти",
     "logout": "Выйти",
-    "signedInAs": "Выполнен вход: {username}",
+    "tokens": "Токены",
+    "profileMenu": "Открыть меню профиля",
     "invalidCredentials": "Неверное имя пользователя или пароль.",
     "rateLimited": "Слишком много попыток. Повторите позже.",
     "requestFailed": "Панели не удалось выполнить запрос авторизации.",
     "unavailableTitle": "Панель недоступна",
     "retry": "Повторить"
+  },
+  "navigation": {
+    "nodes": "Ноды",
+    "clients": "Клиенты"
   },
   "nodes": {
     "title": "Ноды",
@@ -51,13 +55,8 @@
     "loading": "Загрузка нод",
     "empty": "Ноды ещё не добавлены.",
     "loadMore": "Загрузить ещё",
-    "insecureBadge": "Проверка TLS отключена",
-    "insecureGlobalTitle": "Разрешён небезопасный TLS",
-    "insecureGlobalDescription": "Как минимум одна нода принимает непроверенный TLS-сертификат. Регулярно проверяйте необходимость этого исключения.",
     "compatibilityGlobalTitle": "Изменения клиентов заблокированы",
     "compatibilityGlobalDescription": "Как минимум одна нода использует неподдерживаемую версию wg-easy или несовместимый API. Последний безопасный снимок остаётся доступен.",
-    "insecureFormTitle": "Проверка сертификата будет отключена",
-    "insecureFormDescription": "Используйте это только для подконтрольной ноды. Злоумышленник в сети сможет выдать себя за неё.",
     "testVersion": "Обнаружен wg-easy {version}.",
     "testNoVersion": "Не удалось подтвердить совместимую версию wg-easy.",
     "checkedAt": "Проверено: {value}",
@@ -78,8 +77,7 @@
       "port": "Порт",
       "username": "Имя пользователя wg-easy",
       "password": "Пароль wg-easy",
-      "credentialEditHint": "Оставьте пустым, чтобы сохранить зашифрованное значение.",
-      "allowInsecureTls": "Разрешить непроверенный TLS-сертификат"
+      "credentialEditHint": "Оставьте пустым, чтобы сохранить зашифрованное значение."
     },
     "statuses": {
       "healthy": "Работает",

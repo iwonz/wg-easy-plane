@@ -25,18 +25,20 @@ export class ApiTokenStore {
   failure: TokenFailure = null;
   loading = false;
   submitting = false;
+  private transientEpoch = 0;
 
   constructor(
     private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
   ) {
-    makeAutoObservable<ApiTokenStore, 'fetcher'>(
+    makeAutoObservable<ApiTokenStore, 'fetcher' | 'transientEpoch'>(
       this,
-      { fetcher: false },
+      { fetcher: false, transientEpoch: false },
       { autoBind: true },
     );
   }
 
   async load(reset = true): Promise<void> {
+    const epoch = this.transientEpoch;
     this.loading = true;
     this.failure = null;
     const cursor = reset ? null : this.nextCursor;
@@ -48,18 +50,22 @@ export class ApiTokenStore {
       });
       if (!response.ok) throw new Error('Unable to list API tokens');
       const body = (await response.json()) as TokenListResponse;
+      if (epoch !== this.transientEpoch) return;
       runInAction(() => {
         this.items = reset ? body.items : [...this.items, ...body.items];
         this.nextCursor = body.page.nextCursor;
       });
     } catch {
+      if (epoch !== this.transientEpoch) return;
       runInAction(() => {
         this.failure = 'load';
       });
     } finally {
-      runInAction(() => {
-        this.loading = false;
-      });
+      if (epoch === this.transientEpoch) {
+        runInAction(() => {
+          this.loading = false;
+        });
+      }
     }
   }
 
@@ -68,6 +74,7 @@ export class ApiTokenStore {
     scopes: ApiTokenScope[];
     expiresAt: string | null;
   }): Promise<boolean> {
+    const epoch = this.transientEpoch;
     this.submitting = true;
     this.failure = null;
     const body: CreateApiTokenRequest = {
@@ -84,6 +91,7 @@ export class ApiTokenStore {
       });
       if (!response.ok) throw new Error('Unable to create API token');
       const created = (await response.json()) as CreatedTokenResponse;
+      if (epoch !== this.transientEpoch) return false;
       runInAction(() => {
         this.created = created;
         this.items = [
@@ -93,18 +101,22 @@ export class ApiTokenStore {
       });
       return true;
     } catch {
+      if (epoch !== this.transientEpoch) return false;
       runInAction(() => {
         this.failure = 'create';
       });
       return false;
     } finally {
-      runInAction(() => {
-        this.submitting = false;
-      });
+      if (epoch === this.transientEpoch) {
+        runInAction(() => {
+          this.submitting = false;
+        });
+      }
     }
   }
 
   async revoke(tokenId: string): Promise<boolean> {
+    const epoch = this.transientEpoch;
     this.submitting = true;
     this.failure = null;
     try {
@@ -114,16 +126,20 @@ export class ApiTokenStore {
       });
       if (!response.ok) throw new Error('Unable to revoke API token');
       await this.load();
+      if (epoch !== this.transientEpoch) return false;
       return true;
     } catch {
+      if (epoch !== this.transientEpoch) return false;
       runInAction(() => {
         this.failure = 'revoke';
       });
       return false;
     } finally {
-      runInAction(() => {
-        this.submitting = false;
-      });
+      if (epoch === this.transientEpoch) {
+        runInAction(() => {
+          this.submitting = false;
+        });
+      }
     }
   }
 
@@ -136,6 +152,10 @@ export class ApiTokenStore {
   }
 
   clearSensitiveState(): void {
+    this.transientEpoch += 1;
     this.created = null;
+    this.failure = null;
+    this.loading = false;
+    this.submitting = false;
   }
 }

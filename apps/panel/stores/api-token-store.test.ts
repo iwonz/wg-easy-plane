@@ -65,6 +65,30 @@ describe('ApiTokenStore', () => {
     expect(store.created).toBeNull();
   });
 
+  it('does not restore a one-time secret after transient state is cleared', async () => {
+    const token = `wgep_pat_${'c'.repeat(43)}`;
+    let resolveResponse: ((response: Response) => void) | undefined;
+    const fetcher = vi.fn<typeof fetch>(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+    const store = new ApiTokenStore(fetcher);
+    const pending = store.create({
+      name: metadata.name,
+      scopes: ['nodes:read'],
+      expiresAt: null,
+    });
+
+    store.clearSensitiveState();
+    resolveResponse?.(Response.json({ token, metadata }, { status: 201 }));
+
+    await expect(pending).resolves.toBe(false);
+    expect(store.created).toBeNull();
+    expect(JSON.stringify(store)).not.toContain(token);
+  });
+
   it('maps safe load, create, and revoke failures', async () => {
     const fetcher = vi
       .fn<typeof fetch>()

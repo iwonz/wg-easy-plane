@@ -335,9 +335,6 @@
           "port": {
             "type": "integer"
           },
-          "allowInsecureTls": {
-            "type": "boolean"
-          },
           "status": {
             "$ref": "#/components/schemas/NodeStatus"
           },
@@ -373,7 +370,6 @@
           "protocol",
           "host",
           "port",
-          "allowInsecureTls",
           "status",
           "detectedVersion",
           "mode",
@@ -450,10 +446,6 @@
             "minLength": 1,
             "maxLength": 1024
           },
-          "allowInsecureTls": {
-            "type": "boolean",
-            "default": false
-          },
           "name": {
             "type": "string",
             "minLength": 1,
@@ -521,10 +513,6 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 1024
-          },
-          "allowInsecureTls": {
-            "type": "boolean",
-            "default": false
           }
         },
         "required": ["protocol", "host", "port", "username", "password"],
@@ -558,9 +546,6 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 1024
-          },
-          "allowInsecureTls": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false

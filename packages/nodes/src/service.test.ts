@@ -124,7 +124,6 @@ function connectionInput(index = 1) {
     port: 51821,
     username: `synthetic-admin-${index}`,
     password: `synthetic-password-${index}`,
-    allowInsecureTls: false,
   };
 }
 

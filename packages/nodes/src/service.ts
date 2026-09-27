@@ -74,7 +74,6 @@ type NodeRow = {
   port: number;
   username_ciphertext: string;
   password_ciphertext: string;
-  allow_insecure_tls: number;
   status: string;
   detected_version: string | null;
   mode: string | null;
@@ -168,7 +167,6 @@ function metadataFromRow(row: NodeRow): NodeMetadata {
     protocol: row.protocol,
     host: row.host,
     port: row.port,
-    allowInsecureTls: row.allow_insecure_tls === 1,
     status: row.status,
     detectedVersion: row.detected_version,
     mode: row.mode,
@@ -362,10 +360,10 @@ export class NodeService {
         .prepare(
           `insert into nodes
            (id, name, protocol, host, port, username_ciphertext,
-            password_ciphertext, allow_insecure_tls, status, detected_version,
+            password_ciphertext, status, detected_version,
             mode, last_checked_at, last_synced_at, last_error_code,
             created_at, updated_at)
-           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, null, ?, ?, ?)`,
+           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, null, ?, ?, ?)`,
         )
         .run(
           id,
@@ -375,7 +373,6 @@ export class NodeService {
           parsed.data.port,
           usernameCiphertext,
           passwordCiphertext,
-          parsed.data.allowInsecureTls ? 1 : 0,
           probe.status,
           probe.detectedVersion,
           probe.mode,
@@ -408,14 +405,12 @@ export class NodeService {
       'port',
       'username',
       'password',
-      'allowInsecureTls',
     ].some((key) => Object.hasOwn(parsed.data, key));
     const name = parsed.data.name ?? row.name;
 
     let protocol = row.protocol;
     let host = row.host;
     let port = row.port;
-    let allowInsecureTls = row.allow_insecure_tls === 1;
     let usernameCiphertext = row.username_ciphertext;
     let passwordCiphertext = row.password_ciphertext;
     let probe: ProbeState | null = null;
@@ -433,13 +428,10 @@ export class NodeService {
         port: parsed.data.port ?? row.port,
         username,
         password,
-        allowInsecureTls:
-          parsed.data.allowInsecureTls ?? row.allow_insecure_tls === 1,
       });
       protocol = connection.protocol;
       host = connection.host;
       port = connection.port;
-      allowInsecureTls = connection.allowInsecureTls;
       this.#assertUnique(name, connection, nodeId);
       probe = await this.#probe(connection, {
         detectedVersion: row.detected_version,
@@ -459,7 +451,7 @@ export class NodeService {
           `update nodes set
              name = ?, protocol = ?, host = ?, port = ?,
              username_ciphertext = ?, password_ciphertext = ?,
-             allow_insecure_tls = ?, status = ?, detected_version = ?,
+             status = ?, detected_version = ?,
              mode = ?, last_checked_at = ?, last_error_code = ?, updated_at = ?
            where id = ?`,
         )
@@ -470,7 +462,6 @@ export class NodeService {
           port,
           usernameCiphertext,
           passwordCiphertext,
-          allowInsecureTls ? 1 : 0,
           probe?.status ?? row.status,
           probe?.detectedVersion ?? row.detected_version,
           probe?.mode ?? row.mode,
@@ -504,7 +495,6 @@ export class NodeService {
         'password',
         row.password_ciphertext,
       ),
-      allowInsecureTls: row.allow_insecure_tls === 1,
     });
     const probe = await this.#probe(connection, {
       detectedVersion: row.detected_version,
@@ -545,7 +535,6 @@ export class NodeService {
         'password',
         row.password_ciphertext,
       ),
-      allowInsecureTls: row.allow_insecure_tls === 1,
     });
     const adapterConnection: WgEasyConnection = {
       ...connection,
@@ -769,7 +758,6 @@ export class NodeService {
         'password',
         row.password_ciphertext,
       ),
-      allowInsecureTls: row.allow_insecure_tls === 1,
       timeoutMs: this.requestTimeoutMs,
     };
   }

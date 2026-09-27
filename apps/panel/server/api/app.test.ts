@@ -88,6 +88,7 @@ describe('panel API', () => {
     });
     expect(JSON.stringify(document)).not.toContain('tokenHash');
     expect(JSON.stringify(document)).not.toContain('token_hash');
+    expect(JSON.stringify(document)).not.toContain('allowInsecureTls');
   });
 
   it('serves the Scalar API reference', async () => {

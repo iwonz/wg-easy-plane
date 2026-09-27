@@ -83,7 +83,6 @@ function nodeBody() {
     port: 51821,
     username: 'synthetic-inventory-admin',
     password: 'synthetic-inventory-password',
-    allowInsecureTls: false,
   };
 }
 

@@ -42,7 +42,6 @@ function nodeBody(index = 1) {
     port: 51821,
     username: `synthetic-admin-${index}`,
     password: `synthetic-password-${index}`,
-    allowInsecureTls: false,
   };
 }
 
@@ -54,7 +53,6 @@ function connectionBody(index = 1) {
     port: node.port,
     username: node.username,
     password: node.password,
-    allowInsecureTls: node.allowInsecureTls,
   };
 }
 
@@ -383,5 +381,42 @@ describe('node routes', () => {
     );
     expect(invalid.status).toBe(400);
     expect(fixture.calls).toHaveLength(0);
+  });
+
+  it('rejects the removed insecure TLS property on create, update, and test', async () => {
+    const fixture = createFixture();
+    const cookie = await fixture.accessCookie();
+    const legacyConnection = {
+      ...connectionBody(),
+      allowInsecureTls: false,
+    };
+
+    const testResponse = await fixture.api.request(
+      '/api/v1/nodes/test',
+      jsonMutation(legacyConnection, { cookie }),
+    );
+    const createResponse = await fixture.api.request(
+      '/api/v1/nodes',
+      jsonMutation({ name: 'Legacy node', ...legacyConnection }, { cookie }),
+    );
+
+    fixture.outcomes.push(healthyProbe());
+    const createdResponse = await fixture.api.request(
+      '/api/v1/nodes',
+      jsonMutation(nodeBody(), { cookie }),
+    );
+    const created = (await createdResponse.json()) as { id: string };
+    const updateResponse = await fixture.api.request(
+      `/api/v1/nodes/${created.id}`,
+      {
+        ...jsonMutation({ allowInsecureTls: false }, { cookie }),
+        method: 'PATCH',
+      },
+    );
+
+    expect(testResponse.status).toBe(400);
+    expect(createResponse.status).toBe(400);
+    expect(updateResponse.status).toBe(400);
+    expect(fixture.calls).toHaveLength(1);
   });
 });
