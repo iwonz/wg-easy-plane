@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { MantineProvider } from '@mantine/core';
+import {
+  defaultCssVariablesResolver,
+  MantineProvider,
+  type CSSVariablesResolver,
+} from '@mantine/core';
 import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl';
 
 import { createUiStore, UiStoreContext } from './store';
@@ -14,6 +18,22 @@ type ApplicationProvidersProps = {
   messages: AbstractIntlMessages;
 };
 
+const cssVariablesResolver: CSSVariablesResolver = (resolvedTheme) => {
+  const defaults = defaultCssVariablesResolver(resolvedTheme);
+
+  return {
+    variables: defaults.variables,
+    light: {
+      ...defaults.light,
+      '--mantine-color-dimmed': resolvedTheme.colors.gray[7],
+    },
+    dark: {
+      ...defaults.dark,
+      '--mantine-color-dimmed': resolvedTheme.colors.dark[1],
+    },
+  };
+};
+
 export function ApplicationProviders({
   children,
   locale,
@@ -24,7 +44,11 @@ export function ApplicationProviders({
   return (
     <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
       <UiStoreContext.Provider value={store}>
-        <MantineProvider defaultColorScheme="auto" theme={theme}>
+        <MantineProvider
+          cssVariablesResolver={cssVariablesResolver}
+          defaultColorScheme="auto"
+          theme={theme}
+        >
           {children}
         </MantineProvider>
       </UiStoreContext.Provider>

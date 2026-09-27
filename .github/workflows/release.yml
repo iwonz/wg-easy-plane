@@ -37,7 +37,7 @@ jobs:
           - target: subscription
             image: ghcr.io/iwonz/wg-easy-plane-subscription
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.release.outputs.tag_name }}
       - uses: docker/setup-qemu-action@v3

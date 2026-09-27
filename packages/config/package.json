@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./security-headers": "./src/security-headers.ts"
   },
   "scripts": {
     "build": "tsc --outDir dist --declaration --emitDeclarationOnly --noEmit false",

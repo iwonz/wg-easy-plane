@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { NextConfig } from 'next';
+import { browserSecurityHeaders } from '@wg-easy-plane/config/security-headers';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
@@ -10,15 +11,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/:path*',
-        headers: [
-          { key: 'Referrer-Policy', value: 'no-referrer' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'X-Frame-Options', value: 'DENY' },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
-          },
-        ],
+        headers: browserSecurityHeaders(),
       },
       {
         source: '/',

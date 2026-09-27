@@ -20,21 +20,29 @@
     "format:check": "prettier . --check",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:containers": "node scripts/container-smoke.mjs",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "pnpm build && node scripts/run-e2e.mjs",
+    "test:privacy": "node scripts/privacy-audit.mjs",
     "typecheck": "turbo run typecheck",
-    "verify": "pnpm api:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && openspec validate --all --strict && openspec validate --archived --strict"
+    "verify": "pnpm api:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:privacy && pnpm build && openspec validate --all --strict && openspec validate --archived --strict",
+    "verify:release": "pnpm verify && pnpm test:coverage && pnpm test:e2e && pnpm test:containers"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "@types/better-sqlite3": "9.6.0",
     "@types/node": "26.6.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@types/better-sqlite3": "9.6.0",
+    "@vitest/coverage-v8": "5.0.2",
     "drizzle-kit": "0.31.11",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.6",
     "openapi-typescript": "7.13.0",
     "prettier": "3.9.9",
-    "turbo": "2.11.4",
     "tsx": "4.23.13",
+    "turbo": "2.11.4",
     "typescript": "6.0.3",
     "vitest": "5.0.2"
   }

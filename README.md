@@ -16,6 +16,7 @@ The control plane intentionally supports exactly wg-easy `15.4.0` in the first r
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a change.
 - Report vulnerabilities using [SECURITY.md](SECURITY.md), never a public issue.
 - Do not use real node addresses, credentials, clients, VPN configurations, or QR payloads in tests or examples.
+- See the [verification strategy](docs/testing.md) for release gates and scenario traceability.
 
 ## Releases
 
