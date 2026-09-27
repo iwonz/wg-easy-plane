@@ -3,6 +3,7 @@ import type { NextConfig } from 'next';
 import { browserSecurityHeaders } from '@wg-easy-plane/config/security-headers';
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ['localhost', '127.0.0.1'],
   output: 'standalone',
   outputFileTracingRoot: path.join(import.meta.dirname, '../..'),
   poweredByHeader: false,
