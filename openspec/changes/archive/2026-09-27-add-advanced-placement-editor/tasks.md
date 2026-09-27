@@ -21,4 +21,4 @@
 ## 4. Verification and delivery
 
 - [x] 4.1 Regenerate the API client and pass strict OpenSpec validation, formatting, lint, typecheck, unit/integration tests, and production builds.
-- [ ] 4.2 Run privacy and secret scans, inspect the diff, archive the change, fast-forward merge it to clean `master`, smoke-check, push, and remove the task branch.
+- [x] 4.2 Run privacy and secret scans, inspect the diff, archive the change, fast-forward merge it to clean `master`, smoke-check, push, and remove the task branch.
