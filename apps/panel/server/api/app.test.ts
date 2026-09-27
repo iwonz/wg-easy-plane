@@ -53,12 +53,20 @@ describe('panel API', () => {
     expect(document.paths).toHaveProperty('/api/v1/auth/refresh');
     expect(document.paths).toHaveProperty('/api/v1/auth/logout');
     expect(document.paths).toHaveProperty('/api/v1/auth/me');
+    expect(document.paths).toHaveProperty('/api/v1/tokens');
+    expect(document.paths).toHaveProperty('/api/v1/tokens/{tokenId}');
+    expect(document.paths['/api/v1/tokens'].post.security).toEqual([
+      { cookieAuth: [] },
+      { bearerAuth: [] },
+    ]);
     expect(document.components.securitySchemes).toMatchObject({
       cookieAuth: { type: 'apiKey', in: 'cookie' },
       refreshCookieAuth: { type: 'apiKey', in: 'cookie' },
       bearerAuth: { type: 'http', scheme: 'bearer' },
       subscriptionSession: { type: 'apiKey', in: 'cookie' },
     });
+    expect(JSON.stringify(document)).not.toContain('tokenHash');
+    expect(JSON.stringify(document)).not.toContain('token_hash');
   });
 
   it('serves the Scalar API reference', async () => {

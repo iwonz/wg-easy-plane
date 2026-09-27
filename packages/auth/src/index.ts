@@ -13,8 +13,14 @@ export {
   REFRESH_TOKEN_TTL_SECONDS,
   USERNAME_PATTERN,
 } from './service';
+export { ApiTokenError, ApiTokenService } from './api-token-service';
 export type {
   AuthenticatedSession,
   PublicAdmin,
   SessionTokens,
 } from './service';
+export type {
+  ApiTokenPage,
+  ApiTokenPrincipal,
+  CreatedApiToken,
+} from './api-token-service';

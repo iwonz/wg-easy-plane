@@ -172,6 +172,9 @@ importers:
       '@node-rs/argon2':
         specifier: 2.2.1
         version: 2.2.1
+      '@wg-easy-plane/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@wg-easy-plane/database':
         specifier: workspace:*
         version: link:../database

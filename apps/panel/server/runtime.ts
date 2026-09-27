@@ -1,4 +1,4 @@
-import { AuthService } from '@wg-easy-plane/auth';
+import { ApiTokenService, AuthService } from '@wg-easy-plane/auth';
 import { loadRuntimeConfig } from '@wg-easy-plane/config';
 import { openDatabase } from '@wg-easy-plane/database';
 import type { DatabaseConnection } from '@wg-easy-plane/database';
@@ -8,7 +8,11 @@ export type PanelAuthRuntime = {
   trustedOrigin: string;
 };
 
-type PanelRuntimeState = PanelAuthRuntime & {
+export type PanelApiTokenRuntime = PanelAuthRuntime & {
+  apiTokenService: ApiTokenService;
+};
+
+type PanelRuntimeState = PanelApiTokenRuntime & {
   connection: DatabaseConnection;
 };
 
@@ -25,9 +29,16 @@ export function getPanelAuthRuntime(): PanelAuthRuntime {
       authService: new AuthService(connection, {
         masterKey: config.appEncryptionKey,
       }),
+      apiTokenService: new ApiTokenService(connection, {
+        masterKey: config.appEncryptionKey,
+      }),
       trustedOrigin: config.panelPublicUrl.origin,
     };
   }
 
   return runtimeGlobal.__wgepPanelRuntime;
+}
+
+export function getPanelApiTokenRuntime(): PanelApiTokenRuntime {
+  return getPanelAuthRuntime() as PanelRuntimeState;
 }

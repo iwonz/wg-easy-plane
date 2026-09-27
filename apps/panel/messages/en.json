@@ -31,5 +31,57 @@
     "requestFailed": "The panel could not complete the authentication request.",
     "unavailableTitle": "Panel unavailable",
     "retry": "Try again"
+  },
+  "tokens": {
+    "title": "API tokens",
+    "description": "Create revocable credentials with only the scopes your automation needs.",
+    "create": "Create token",
+    "createTitle": "Create API token",
+    "name": "Token name",
+    "scopeLabel": "Scopes",
+    "expiration": "Expiration",
+    "expirationHint": "Optional. Uses your local time and is stored as UTC.",
+    "cancel": "Cancel",
+    "secretTitle": "Copy this token now",
+    "secretDescription": "This complete secret is shown only once. It cannot be recovered after dismissal or reload.",
+    "copy": "Copy token",
+    "copied": "Copied",
+    "copyFailed": "Clipboard access failed. Select and copy the token manually.",
+    "dismiss": "I saved it",
+    "loading": "Loading API tokens",
+    "empty": "No API tokens have been created.",
+    "loadMore": "Load more",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke API token",
+    "revokeDescription": "Revoke {name}? Requests using it will fail immediately.",
+    "confirmRevoke": "Revoke token",
+    "columns": {
+      "name": "Name",
+      "scopes": "Scopes",
+      "expires": "Expires",
+      "lastUsed": "Last used",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "statuses": {
+      "active": "Active",
+      "expired": "Expired",
+      "revoked": "Revoked"
+    },
+    "failures": {
+      "load": "API tokens could not be loaded.",
+      "create": "The API token could not be created. Check the fields and try again.",
+      "revoke": "The API token could not be revoked. Try again."
+    },
+    "scopes": {
+      "systemRead": "Read system information",
+      "nodesRead": "Read nodes",
+      "nodesWrite": "Change nodes",
+      "clientsRead": "Read clients",
+      "clientsWrite": "Change clients",
+      "subscriptionsRead": "Read subscriptions",
+      "subscriptionsWrite": "Change subscriptions",
+      "tokensManage": "Manage API tokens"
+    }
   }
 }

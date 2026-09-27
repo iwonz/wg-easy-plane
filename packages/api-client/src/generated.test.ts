@@ -18,8 +18,12 @@ describe('generated API client artifacts', () => {
       '/api/v1/auth/refresh',
       '/api/v1/auth/logout',
       '/api/v1/auth/me',
+      '/api/v1/tokens',
+      '/api/v1/tokens/{tokenId}',
     ]) {
       expect(source).toContain(`'${path}'`);
     }
+    expect(source).not.toContain('tokenHash');
+    expect(source).not.toContain('token_hash');
   });
 });

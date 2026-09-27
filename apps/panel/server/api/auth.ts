@@ -23,7 +23,7 @@ import type { ApiEnvironment } from './types';
 export const ACCESS_COOKIE_NAME = 'wgep_access';
 export const REFRESH_COOKIE_NAME = 'wgep_refresh';
 
-class OriginError extends Error {
+export class OriginError extends Error {
   constructor() {
     super('Untrusted request origin');
     this.name = 'OriginError';
@@ -67,7 +67,7 @@ function clearSessionCookies(context: Context<ApiEnvironment>): void {
   deleteCookie(context, REFRESH_COOKIE_NAME, cookieOptions);
 }
 
-function requireTrustedOrigin(
+export function requireTrustedOrigin(
   context: Context<ApiEnvironment>,
   trustedOrigin: string,
 ): void {

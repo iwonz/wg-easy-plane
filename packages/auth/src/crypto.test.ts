@@ -29,11 +29,17 @@ describe('authentication cryptography', () => {
     expect(Buffer.from(keys.refreshIdentifier)).not.toEqual(
       Buffer.from(keys.rateLimitIdentity),
     );
+    expect(Buffer.from(keys.apiToken)).not.toEqual(
+      Buffer.from(keys.refreshIdentifier),
+    );
     expect(keyedDigest(keys.refreshIdentifier, 'synthetic-id')).toBe(
       keyedDigest(keys.refreshIdentifier, 'synthetic-id'),
     );
     expect(keyedDigest(keys.refreshIdentifier, 'synthetic-id')).not.toBe(
       keyedDigest(keys.rateLimitIdentity, 'synthetic-id'),
+    );
+    expect(keyedDigest(keys.apiToken, 'synthetic-id')).not.toBe(
+      keyedDigest(keys.refreshIdentifier, 'synthetic-id'),
     );
   });
 });

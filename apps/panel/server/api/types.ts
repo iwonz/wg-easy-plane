@@ -1,8 +1,17 @@
-import type { ErrorCode, ErrorResponse } from '@wg-easy-plane/contracts';
+import type {
+  ApiTokenScope,
+  ErrorCode,
+  ErrorResponse,
+} from '@wg-easy-plane/contracts';
+
+export type RequestPrincipal =
+  | { kind: 'admin'; adminId: string }
+  | { kind: 'api-token'; tokenId: string; scopes: ApiTokenScope[] };
 
 export type ApiEnvironment = {
   Variables: {
     requestId: string;
+    principal: RequestPrincipal;
   };
 };
 

@@ -20,6 +20,7 @@ import { observer } from 'mobx-react-lite';
 import { useTranslations } from 'next-intl';
 
 import { AuthStore } from '../stores/auth-store';
+import { ApiTokenManagement } from './api-token-management';
 
 function failureKey(failure: AuthStore['failure']) {
   if (failure === 'invalid-credentials') return 'invalidCredentials' as const;
@@ -97,6 +98,7 @@ export const AuthGate = observer(function AuthGate() {
               <Text c="dimmed">{t('home.description')}</Text>
             </Stack>
           </Paper>
+          <ApiTokenManagement />
         </Stack>
       </Container>
     );

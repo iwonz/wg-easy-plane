@@ -18,6 +18,7 @@ export type AuthKeys = {
   jwtSigning: Uint8Array;
   refreshIdentifier: Uint8Array;
   rateLimitIdentity: Uint8Array;
+  apiToken: Uint8Array;
 };
 
 export type AccessClaims = {
@@ -50,6 +51,7 @@ export function deriveAuthKeys(masterKey: Uint8Array): AuthKeys {
     jwtSigning: deriveKey(masterKey, 'auth/jwt-signing'),
     refreshIdentifier: deriveKey(masterKey, 'auth/refresh-id'),
     rateLimitIdentity: deriveKey(masterKey, 'auth/rate-limit-key'),
+    apiToken: deriveKey(masterKey, 'auth/api-token'),
   };
 }
 
