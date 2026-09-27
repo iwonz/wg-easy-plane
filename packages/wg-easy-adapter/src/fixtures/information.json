@@ -1,0 +1,11 @@
+{
+  "currentRelease": "v15.4.0",
+  "latestRelease": {
+    "version": "v15.4.0",
+    "changelog": ""
+  },
+  "updateAvailable": false,
+  "insecure": false,
+  "isAwg": false,
+  "firewallEnabled": true
+}
