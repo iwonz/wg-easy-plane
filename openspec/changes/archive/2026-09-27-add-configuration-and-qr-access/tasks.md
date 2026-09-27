@@ -16,4 +16,4 @@
 ## 4. Verification and delivery
 
 - [x] 4.1 Run `openspec validate add-configuration-and-qr-access --strict`, deterministic OpenAPI generation, formatting, lint, typecheck, all tests, and both production builds.
-- [ ] 4.2 Run gitleaks and privacy inspection, archive the OpenSpec change, fast-forward into clean `master`, rerun `pnpm verify`, push, and remove the task branch.
+- [x] 4.2 Run gitleaks and privacy inspection, archive the OpenSpec change, fast-forward into clean `master`, rerun `pnpm verify`, push, and remove the task branch.
