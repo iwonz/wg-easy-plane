@@ -20,10 +20,32 @@ describe('generated API client artifacts', () => {
       '/api/v1/auth/me',
       '/api/v1/tokens',
       '/api/v1/tokens/{tokenId}',
+      '/api/v1/nodes',
+      '/api/v1/nodes/test',
+      '/api/v1/nodes/{nodeId}',
+      '/api/v1/nodes/{nodeId}/test',
     ]) {
       expect(source).toContain(`'${path}'`);
     }
     expect(source).not.toContain('tokenHash');
     expect(source).not.toContain('token_hash');
+  });
+
+  it('keeps node credentials out of response metadata', async () => {
+    const document = JSON.parse(
+      await readFile(path.resolve('packages/api-client/openapi.json'), 'utf8'),
+    ) as {
+      components: {
+        schemas: {
+          NodeMetadata: { properties: Record<string, unknown> };
+        };
+      };
+    };
+    const properties = document.components.schemas.NodeMetadata.properties;
+
+    expect(properties).not.toHaveProperty('username');
+    expect(properties).not.toHaveProperty('password');
+    expect(properties).not.toHaveProperty('usernameCiphertext');
+    expect(properties).not.toHaveProperty('passwordCiphertext');
   });
 });

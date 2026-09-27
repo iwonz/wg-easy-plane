@@ -190,6 +190,77 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/nodes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List safe node metadata */
+    get: operations['listNodes'];
+    put?: never;
+    /** Create and probe a node */
+    post: operations['createNode'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/nodes/test': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Test unsaved node connection settings */
+    post: operations['testNodeConnection'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/nodes/{nodeId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read safe node metadata */
+    get: operations['getNode'];
+    put?: never;
+    post?: never;
+    /** Delete a node without upstream side effects */
+    delete: operations['deleteNode'];
+    options?: never;
+    head?: never;
+    /** Update and conditionally probe a node */
+    patch: operations['updateNode'];
+    trace?: never;
+  };
+  '/api/v1/nodes/{nodeId}/test': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Retest a stored node */
+    post: operations['testStoredNode'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -299,6 +370,97 @@ export interface components {
       scopes: components['schemas']['ApiTokenScope'][];
       /** Format: date-time */
       expiresAt?: string | null;
+    };
+    NodeList: {
+      items: components['schemas']['NodeMetadata'][];
+      page: components['schemas']['CursorPage'];
+    };
+    NodeMetadata: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      protocol: components['schemas']['NodeProtocol'];
+      host: components['schemas']['NodeHost'];
+      port: number;
+      allowInsecureTls: boolean;
+      status: components['schemas']['NodeStatus'];
+      detectedVersion: string | null;
+      mode: components['schemas']['NodeMode'];
+      lastErrorCode: components['schemas']['NodeErrorCode'];
+      /** Format: date-time */
+      lastCheckedAt: string | null;
+      /** Format: date-time */
+      lastSyncedAt: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    /** @enum {string} */
+    NodeProtocol: 'http' | 'https';
+    /**
+     * @description Hostname or IP address without a scheme, path, or port
+     * @example node.example.test
+     */
+    NodeHost: string;
+    /** @enum {string} */
+    NodeStatus:
+      | 'healthy'
+      | 'unreachable'
+      | 'auth_failed'
+      | 'tls_error'
+      | 'unsupported_version'
+      | 'api_incompatible';
+    /** @enum {string|null} */
+    NodeMode: 'wireguard' | 'amnezia' | null;
+    /** @enum {string|null} */
+    NodeErrorCode:
+      | 'TIMEOUT'
+      | 'TLS_ERROR'
+      | 'UNREACHABLE'
+      | 'REDIRECT_BLOCKED'
+      | 'RESPONSE_TOO_LARGE'
+      | 'AUTH_FAILED'
+      | 'NOT_FOUND'
+      | 'UNSUPPORTED_VERSION'
+      | 'API_INCOMPATIBLE'
+      | 'UPSTREAM_ERROR'
+      | null;
+    CreateNodeRequest: {
+      protocol: components['schemas']['NodeProtocol'];
+      host: components['schemas']['NodeHost'];
+      port: number;
+      username: string;
+      password: string;
+      /** @default false */
+      allowInsecureTls: boolean;
+      name: string;
+    };
+    NodeConnectionTestResult: {
+      status: components['schemas']['NodeStatus'];
+      detectedVersion: string | null;
+      mode: components['schemas']['NodeMode'];
+      lastErrorCode: components['schemas']['NodeErrorCode'];
+      /** Format: date-time */
+      lastCheckedAt: string;
+    };
+    TestNodeConnectionRequest: {
+      protocol: components['schemas']['NodeProtocol'];
+      host: components['schemas']['NodeHost'];
+      port: number;
+      username: string;
+      password: string;
+      /** @default false */
+      allowInsecureTls: boolean;
+    };
+    UpdateNodeRequest: {
+      name?: string;
+      protocol?: components['schemas']['NodeProtocol'];
+      host?: components['schemas']['NodeHost'];
+      port?: number;
+      username?: string;
+      password?: string;
+      allowInsecureTls?: boolean;
     };
   };
   responses: never;
@@ -853,6 +1015,566 @@ export interface operations {
         };
       };
       /** @description API token does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  listNodes: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Cursor-paginated node metadata */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NodeList'];
+        };
+      };
+      /** @description Invalid pagination input */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description The credential lacks node-read authority */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  createNode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateNodeRequest'];
+      };
+    };
+    responses: {
+      /** @description Node created with safe probe status */
+      201: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NodeMetadata'];
+        };
+      };
+      /** @description Invalid node input */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Node name or endpoint already exists */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  testNodeConnection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TestNodeConnectionRequest'];
+      };
+    };
+    responses: {
+      /** @description Safe probe result */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NodeConnectionTestResult'];
+        };
+      };
+      /** @description Invalid node input */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getNode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        nodeId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Safe node metadata */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NodeMetadata'];
+        };
+      };
+      /** @description Invalid node identifier */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description The credential lacks node-read authority */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Node does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  deleteNode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        nodeId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Node deleted */
+      204: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Invalid node identifier */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Node does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Node has managed placements */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  updateNode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        nodeId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateNodeRequest'];
+      };
+    };
+    responses: {
+      /** @description Updated safe node metadata */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NodeMetadata'];
+        };
+      };
+      /** @description Invalid node input */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Node does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Node name or endpoint already exists */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  testStoredNode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        nodeId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Node metadata with refreshed status */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NodeMetadata'];
+        };
+      };
+      /** @description Invalid node identifier */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Untrusted origin or insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Node does not exist */
       404: {
         headers: {
           /** @description Request correlation identifier */

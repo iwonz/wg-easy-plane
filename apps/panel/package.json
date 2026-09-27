@@ -18,6 +18,7 @@
     "@wg-easy-plane/contracts": "workspace:*",
     "@wg-easy-plane/config": "workspace:*",
     "@wg-easy-plane/database": "workspace:*",
+    "@wg-easy-plane/nodes": "workspace:*",
     "@wg-easy-plane/ui": "workspace:*",
     "hono": "4.13.9",
     "mobx": "7.0.5",
@@ -31,6 +32,7 @@
     "@types/node": "26.6.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@wg-easy-plane/wg-easy-adapter": "workspace:*",
     "typescript": "6.0.3"
   }
 }

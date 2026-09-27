@@ -9,7 +9,7 @@
   "home": {
     "badge": "Panel",
     "title": "WG Easy Plane",
-    "description": "The control-plane foundation is ready. Nodes and clients will be added through the next OpenSpec changes."
+    "description": "Manage wg-easy nodes and scoped automation access from this control plane."
   },
   "auth": {
     "loading": "Loading authentication state",
@@ -31,6 +31,70 @@
     "requestFailed": "The panel could not complete the authentication request.",
     "unavailableTitle": "Panel unavailable",
     "retry": "Try again"
+  },
+  "nodes": {
+    "title": "Nodes",
+    "description": "Connect wg-easy 15.4.0 instances and monitor their compatibility status.",
+    "add": "Add node",
+    "addTitle": "Add wg-easy node",
+    "edit": "Edit",
+    "editTitle": "Edit node",
+    "save": "Save",
+    "test": "Retest",
+    "testConnection": "Test connection",
+    "delete": "Delete",
+    "deleteTitle": "Delete node",
+    "deleteDescription": "Delete {name}? This only removes the local node and never deletes remote clients.",
+    "confirmDelete": "Delete node",
+    "cancel": "Cancel",
+    "loading": "Loading nodes",
+    "empty": "No nodes have been added.",
+    "loadMore": "Load more",
+    "insecureBadge": "TLS verification off",
+    "insecureGlobalTitle": "Insecure TLS is enabled",
+    "insecureGlobalDescription": "At least one node accepts an unverified TLS certificate. Review this exception regularly.",
+    "insecureFormTitle": "Certificate verification will be disabled",
+    "insecureFormDescription": "Use this only for a node you control. A network attacker could impersonate the node.",
+    "testVersion": "Detected wg-easy {version}.",
+    "testNoVersion": "No compatible wg-easy version could be confirmed.",
+    "columns": {
+      "name": "Name",
+      "endpoint": "Endpoint",
+      "mode": "Mode",
+      "status": "Status",
+      "checked": "Last checked",
+      "actions": "Actions"
+    },
+    "fields": {
+      "name": "Node name",
+      "protocol": "Protocol",
+      "host": "Host",
+      "hostHint": "Hostname or IP only, without scheme, path, or port.",
+      "port": "Port",
+      "username": "wg-easy username",
+      "password": "wg-easy password",
+      "credentialEditHint": "Leave blank to retain the encrypted stored value.",
+      "allowInsecureTls": "Allow an unverified TLS certificate"
+    },
+    "statuses": {
+      "healthy": "Healthy",
+      "unreachable": "Unreachable",
+      "auth_failed": "Authentication failed",
+      "tls_error": "TLS error",
+      "unsupported_version": "Unsupported version",
+      "api_incompatible": "API incompatible"
+    },
+    "modes": {
+      "wireguard": "WireGuard",
+      "amnezia": "AmneziaWG"
+    },
+    "failures": {
+      "load": "Nodes could not be loaded.",
+      "create": "The node could not be added. Check for duplicate names or endpoints.",
+      "update": "The node could not be updated.",
+      "test": "The connection test could not be completed.",
+      "delete": "The node could not be deleted. Remove its managed placements first."
+    }
   },
   "tokens": {
     "title": "API tokens",

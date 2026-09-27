@@ -1,0 +1,22 @@
+{
+  "name": "@wg-easy-plane/nodes",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --outDir dist --declaration --emitDeclarationOnly --noEmit false",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wg-easy-plane/contracts": "workspace:*",
+    "@wg-easy-plane/database": "workspace:*",
+    "@wg-easy-plane/wg-easy-adapter": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.3",
+    "typescript": "6.0.3"
+  }
+}

@@ -2,6 +2,7 @@ import { ApiTokenService, AuthService } from '@wg-easy-plane/auth';
 import { loadRuntimeConfig } from '@wg-easy-plane/config';
 import { openDatabase } from '@wg-easy-plane/database';
 import type { DatabaseConnection } from '@wg-easy-plane/database';
+import { NodeService } from '@wg-easy-plane/nodes';
 
 export type PanelAuthRuntime = {
   authService: AuthService;
@@ -12,7 +13,11 @@ export type PanelApiTokenRuntime = PanelAuthRuntime & {
   apiTokenService: ApiTokenService;
 };
 
-type PanelRuntimeState = PanelApiTokenRuntime & {
+export type PanelNodeRuntime = PanelApiTokenRuntime & {
+  nodeService: NodeService;
+};
+
+type PanelRuntimeState = PanelNodeRuntime & {
   connection: DatabaseConnection;
 };
 
@@ -32,6 +37,10 @@ export function getPanelAuthRuntime(): PanelAuthRuntime {
       apiTokenService: new ApiTokenService(connection, {
         masterKey: config.appEncryptionKey,
       }),
+      nodeService: new NodeService(connection, {
+        masterKey: config.appEncryptionKey,
+        requestTimeoutMs: config.nodeRequestTimeoutMs,
+      }),
       trustedOrigin: config.panelPublicUrl.origin,
     };
   }
@@ -40,5 +49,9 @@ export function getPanelAuthRuntime(): PanelAuthRuntime {
 }
 
 export function getPanelApiTokenRuntime(): PanelApiTokenRuntime {
+  return getPanelAuthRuntime() as PanelRuntimeState;
+}
+
+export function getPanelNodeRuntime(): PanelNodeRuntime {
   return getPanelAuthRuntime() as PanelRuntimeState;
 }

@@ -1,5 +1,6 @@
 export * from './auth';
 export * from './api-tokens';
+export * from './nodes';
 export {
   CursorPageSchema,
   CursorQuerySchema,

@@ -16,6 +16,11 @@ import {
   type ApiTokenApiDependencies,
 } from './api-tokens';
 import { handleAuthorizationError } from './authorization';
+import {
+  handleNodeApiError,
+  registerNodeRoutes,
+  type NodeApiDependencies,
+} from './nodes';
 import { errorBody } from './types';
 import type { ApiEnvironment } from './types';
 
@@ -30,7 +35,9 @@ export const openApiDocumentConfig = {
   },
 };
 
-export type ApiDependencies = AuthApiDependencies & ApiTokenApiDependencies;
+export type ApiDependencies = AuthApiDependencies &
+  ApiTokenApiDependencies &
+  NodeApiDependencies;
 
 export function createApi(dependencies: ApiDependencies = {}) {
   const rootApi = new OpenAPIHono<ApiEnvironment>({
@@ -105,6 +112,7 @@ export function createApi(dependencies: ApiDependencies = {}) {
 
   registerAuthRoutes(api, dependencies);
   registerApiTokenRoutes(api, dependencies);
+  registerNodeRoutes(api, dependencies);
 
   api.doc31('/openapi.json', openApiDocumentConfig);
   api.get(
@@ -132,6 +140,8 @@ export function createApi(dependencies: ApiDependencies = {}) {
     if (authResponse) return authResponse;
     const authorizationResponse = handleAuthorizationError(error, context);
     if (authorizationResponse) return authorizationResponse;
+    const nodeResponse = handleNodeApiError(error, context);
+    if (nodeResponse) return nodeResponse;
     return context.json(
       errorBody(
         context.get('requestId'),
