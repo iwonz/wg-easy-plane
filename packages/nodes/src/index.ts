@@ -1,6 +1,16 @@
 export { NodeCredentialCipher } from './crypto';
 export type { CredentialField } from './crypto';
 export {
+  ArtifactDeliveryService,
+  configurationFilename,
+  DeliveryServiceError,
+} from './delivery';
+export type {
+  ConfigurationDelivery,
+  DeliveryServiceErrorCode,
+  QrCodeDelivery,
+} from './delivery';
+export {
   NodeService,
   NodeServiceError,
   NodeMutationError,

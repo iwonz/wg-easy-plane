@@ -17,6 +17,11 @@ import {
 } from './api-tokens';
 import { handleAuthorizationError } from './authorization';
 import {
+  handleDeliveryApiError,
+  registerDeliveryRoutes,
+  type DeliveryApiDependencies,
+} from './delivery';
+import {
   handleInventoryApiError,
   registerInventoryRoutes,
   type InventoryApiDependencies,
@@ -49,7 +54,8 @@ export type ApiDependencies = AuthApiDependencies &
   ApiTokenApiDependencies &
   NodeApiDependencies &
   InventoryApiDependencies &
-  ManagedClientApiDependencies;
+  ManagedClientApiDependencies &
+  DeliveryApiDependencies;
 
 export function createApi(dependencies: ApiDependencies = {}) {
   const rootApi = new OpenAPIHono<ApiEnvironment>({
@@ -127,6 +133,7 @@ export function createApi(dependencies: ApiDependencies = {}) {
   registerNodeRoutes(api, dependencies);
   registerInventoryRoutes(api, dependencies);
   registerManagedClientRoutes(api, dependencies);
+  registerDeliveryRoutes(api, dependencies);
 
   api.doc31('/openapi.json', openApiDocumentConfig);
   api.get(
@@ -158,6 +165,8 @@ export function createApi(dependencies: ApiDependencies = {}) {
     if (inventoryResponse) return inventoryResponse;
     const managedClientResponse = handleManagedClientApiError(error, context);
     if (managedClientResponse) return managedClientResponse;
+    const deliveryResponse = handleDeliveryApiError(error, context);
+    if (deliveryResponse) return deliveryResponse;
     const nodeResponse = handleNodeApiError(error, context);
     if (nodeResponse) return nodeResponse;
     return context.json(

@@ -210,6 +210,15 @@
       "selected": "Selected nodes: {count}",
       "submit": "Adopt clients"
     },
+    "delivery": {
+      "download": "Download config",
+      "qr": "Show QR",
+      "title": "Connection QR · {label}",
+      "titleFallback": "Connection QR",
+      "description": "Scan this live image with the matching WireGuard client. It is not stored by the panel.",
+      "alt": "Connection QR code for {label}",
+      "close": "Close"
+    },
     "drift": {
       "inspect": "Inspect",
       "title": "Placement state · {node}",

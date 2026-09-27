@@ -31,6 +31,8 @@ import { useEffect, useState } from 'react';
 import { InventoryStore } from '../stores/inventory-store';
 import { AdvancedPlacementEditor } from './advanced-placement-editor';
 import { DriftResolutionDialog } from './drift-resolution-dialog';
+import { QrCodeDialog } from './qr-code-dialog';
+import type { QrCodeTarget } from './qr-code-dialog';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -73,6 +75,7 @@ export const ClientInventory = observer(function ClientInventory() {
   const [adoptionName, setAdoptionName] = useState('');
   const [adoptionExpiresAt, setAdoptionExpiresAt] = useState('');
   const [adoptionEnabled, setAdoptionEnabled] = useState(true);
+  const [qrTarget, setQrTarget] = useState<QrCodeTarget | null>(null);
 
   useEffect(() => {
     void store.loadAll();
@@ -320,6 +323,34 @@ export const ClientInventory = observer(function ClientInventory() {
                                 <Table.Td>
                                   <Group gap="xs">
                                     {placement.remoteClientId !== null &&
+                                    ['active', 'drift', 'error'].includes(
+                                      placement.status,
+                                    ) ? (
+                                      <>
+                                        <Button
+                                          component="a"
+                                          href={`/api/v1/clients/managed/${client.id}/placements/${placement.id}/configuration`}
+                                          download
+                                          size="xs"
+                                          variant="light"
+                                        >
+                                          {t('delivery.download')}
+                                        </Button>
+                                        <Button
+                                          size="xs"
+                                          variant="light"
+                                          onClick={() =>
+                                            setQrTarget({
+                                              label: `${client.name} · ${placement.nodeName}`,
+                                              url: `/api/v1/clients/managed/${client.id}/placements/${placement.id}/qrcode.svg`,
+                                            })
+                                          }
+                                        >
+                                          {t('delivery.qr')}
+                                        </Button>
+                                      </>
+                                    ) : null}
+                                    {placement.remoteClientId !== null &&
                                     placement.status !== 'ambiguous' &&
                                     placement.status !== 'deleting' &&
                                     placement.status !== 'missing' ? (
@@ -449,6 +480,7 @@ export const ClientInventory = observer(function ClientInventory() {
                         <Table.Th>{t('columns.expiry')}</Table.Th>
                         <Table.Th>{t('columns.seen')}</Table.Th>
                         <Table.Th>{t('columns.state')}</Table.Th>
+                        <Table.Th>{t('columns.actions')}</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -505,6 +537,33 @@ export const ClientInventory = observer(function ClientInventory() {
                                 </Badge>
                               ) : null}
                             </Stack>
+                          </Table.Td>
+                          <Table.Td>
+                            {item.missingAt === null ? (
+                              <Group gap="xs">
+                                <Button
+                                  component="a"
+                                  href={`/api/v1/clients/discovered/${item.nodeId}/${item.remoteClientId}/configuration`}
+                                  download
+                                  size="xs"
+                                  variant="light"
+                                >
+                                  {t('delivery.download')}
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  variant="light"
+                                  onClick={() =>
+                                    setQrTarget({
+                                      label: `${item.publicData.name} · ${item.nodeName}`,
+                                      url: `/api/v1/clients/discovered/${item.nodeId}/${item.remoteClientId}/qrcode.svg`,
+                                    })
+                                  }
+                                >
+                                  {t('delivery.qr')}
+                                </Button>
+                              </Group>
+                            ) : null}
                           </Table.Td>
                         </Table.Tr>
                       ))}
@@ -794,6 +853,8 @@ export const ClientInventory = observer(function ClientInventory() {
         target={driftTarget}
         onClose={() => setDriftTarget(null)}
       />
+
+      <QrCodeDialog target={qrTarget} onClose={() => setQrTarget(null)} />
     </Paper>
   );
 });

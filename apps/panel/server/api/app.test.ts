@@ -59,6 +59,12 @@ describe('panel API', () => {
     expect(document.paths).toHaveProperty(
       '/api/v1/clients/managed/{clientId}/placements/{placementId}/link',
     );
+    expect(document.paths).toHaveProperty(
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/configuration',
+    );
+    expect(document.paths).toHaveProperty(
+      '/api/v1/clients/discovered/{nodeId}/{remoteClientId}/qrcode.svg',
+    );
     expect(document.paths['/api/v1/tokens'].post.security).toEqual([
       { cookieAuth: [] },
       { bearerAuth: [] },

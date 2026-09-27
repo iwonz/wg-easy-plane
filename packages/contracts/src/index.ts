@@ -1,5 +1,6 @@
 export * from './auth';
 export * from './api-tokens';
+export * from './delivery';
 export * from './inventory';
 export * from './managed-clients';
 export * from './nodes';

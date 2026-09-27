@@ -3,6 +3,7 @@ import { loadRuntimeConfig } from '@wg-easy-plane/config';
 import { openDatabase } from '@wg-easy-plane/database';
 import type { DatabaseConnection } from '@wg-easy-plane/database';
 import {
+  ArtifactDeliveryService,
   InventorySyncScheduler,
   InventorySyncService,
   ManagedClientService,
@@ -31,7 +32,11 @@ export type PanelManagedClientRuntime = PanelInventoryRuntime & {
   managedClientService: ManagedClientService;
 };
 
-type PanelRuntimeState = PanelManagedClientRuntime & {
+export type PanelDeliveryRuntime = PanelManagedClientRuntime & {
+  artifactDeliveryService: ArtifactDeliveryService;
+};
+
+type PanelRuntimeState = PanelDeliveryRuntime & {
   connection: DatabaseConnection;
   inventorySyncScheduler: InventorySyncScheduler;
 };
@@ -65,6 +70,10 @@ export function getPanelAuthRuntime(): PanelAuthRuntime {
       nodeService,
       inventorySyncService,
     );
+    const artifactDeliveryService = new ArtifactDeliveryService(
+      connection,
+      nodeService,
+    );
     const state: PanelRuntimeState = {
       connection,
       authService: new AuthService(connection, {
@@ -76,6 +85,7 @@ export function getPanelAuthRuntime(): PanelAuthRuntime {
       nodeService,
       inventorySyncService,
       managedClientService,
+      artifactDeliveryService,
       inventorySyncScheduler,
       trustedOrigin: config.panelPublicUrl.origin,
     };
@@ -99,5 +109,9 @@ export function getPanelInventoryRuntime(): PanelInventoryRuntime {
 }
 
 export function getPanelManagedClientRuntime(): PanelManagedClientRuntime {
+  return getPanelAuthRuntime() as PanelRuntimeState;
+}
+
+export function getPanelDeliveryRuntime(): PanelDeliveryRuntime {
   return getPanelAuthRuntime() as PanelRuntimeState;
 }

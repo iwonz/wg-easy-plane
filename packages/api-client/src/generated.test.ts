@@ -35,6 +35,10 @@ describe('generated API client artifacts', () => {
       '/api/v1/clients/managed/{clientId}/placements/{placementId}/reapply-desired',
       '/api/v1/clients/managed/{clientId}/placements/{placementId}/recreate',
       '/api/v1/clients/managed/{clientId}/placements/{placementId}/link',
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/configuration',
+      '/api/v1/clients/managed/{clientId}/placements/{placementId}/qrcode.svg',
+      '/api/v1/clients/discovered/{nodeId}/{remoteClientId}/configuration',
+      '/api/v1/clients/discovered/{nodeId}/{remoteClientId}/qrcode.svg',
     ]) {
       expect(source).toContain(`'${path}'`);
     }
@@ -121,5 +125,56 @@ describe('generated API client artifacts', () => {
     expect(properties).not.toHaveProperty('privateKey');
     expect(properties).not.toHaveProperty('configuration');
     expect(properties).not.toHaveProperty('qr');
+  });
+
+  it('documents live delivery as binary private no-store responses', async () => {
+    const document = JSON.parse(
+      await readFile(path.resolve('packages/api-client/openapi.json'), 'utf8'),
+    ) as {
+      paths: Record<
+        string,
+        {
+          get: {
+            responses: Record<
+              string,
+              {
+                content?: Record<string, { schema: Record<string, unknown> }>;
+                headers?: Record<string, { schema?: Record<string, unknown> }>;
+              }
+            >;
+          };
+        }
+      >;
+    };
+    const config =
+      document.paths[
+        '/api/v1/clients/managed/{clientId}/placements/{placementId}/configuration'
+      ]?.get.responses['200'];
+    const qr =
+      document.paths[
+        '/api/v1/clients/discovered/{nodeId}/{remoteClientId}/qrcode.svg'
+      ]?.get.responses['200'];
+
+    if (!config || !qr) throw new Error('Delivery paths were not generated');
+    const configBody = config.content?.['application/octet-stream'];
+    const configCacheHeader = config.headers?.['Cache-Control'];
+    const qrCacheHeader = qr.headers?.['Cache-Control'];
+    if (!configBody || !configCacheHeader || !qrCacheHeader) {
+      throw new Error('Delivery response metadata was not generated');
+    }
+
+    expect(config.content).toHaveProperty('application/octet-stream');
+    expect(configBody.schema).toMatchObject({
+      type: 'string',
+      format: 'binary',
+    });
+    expect(configCacheHeader.schema).toMatchObject({
+      enum: ['private, no-store'],
+    });
+    expect(config.headers).toHaveProperty('Content-Disposition');
+    expect(qr.content).toHaveProperty('image/svg+xml');
+    expect(qrCacheHeader.schema).toMatchObject({
+      enum: ['private, no-store'],
+    });
   });
 });

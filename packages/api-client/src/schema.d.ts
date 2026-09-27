@@ -571,6 +571,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/clients/managed/{clientId}/placements/{placementId}/configuration': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Download a managed placement configuration live */
+    get: operations['getManagedConfiguration'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/clients/managed/{clientId}/placements/{placementId}/qrcode.svg': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read a managed placement QR image live */
+    get: operations['getManagedQrCode'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/clients/discovered/{nodeId}/{remoteClientId}/configuration': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Download a discovered client configuration live */
+    get: operations['getDiscoveredConfiguration'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/clients/discovered/{nodeId}/{remoteClientId}/qrcode.svg': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read a discovered client QR image live */
+    get: operations['getDiscoveredQrCode'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4152,6 +4220,428 @@ export interface operations {
       };
       /** @description Unexpected server error */
       500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getManagedConfiguration: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clientId: string;
+        placementId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Live client configuration attachment */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          'Content-Disposition': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/octet-stream': string;
+        };
+      };
+      /** @description Invalid artifact target */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Client or placement does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Artifact target is not currently resolvable */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Upstream artifact request failed safely */
+      502: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getManagedQrCode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clientId: string;
+        placementId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Live validated client QR image */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'image/svg+xml': string;
+        };
+      };
+      /** @description Invalid artifact target */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Client or placement does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Artifact target is not currently resolvable */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Upstream artifact request failed safely */
+      502: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getDiscoveredConfiguration: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        nodeId: string;
+        remoteClientId: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Live client configuration attachment */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          'Content-Disposition': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/octet-stream': string;
+        };
+      };
+      /** @description Invalid artifact target */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Client or placement does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Artifact target is not currently resolvable */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Upstream artifact request failed safely */
+      502: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getDiscoveredQrCode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        nodeId: string;
+        remoteClientId: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Live validated client QR image */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'image/svg+xml': string;
+        };
+      };
+      /** @description Invalid artifact target */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Client or placement does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Artifact target is not currently resolvable */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Upstream artifact request failed safely */
+      502: {
         headers: {
           /** @description Request correlation identifier */
           'X-Request-Id': string;

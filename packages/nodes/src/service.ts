@@ -25,6 +25,7 @@ import {
   type WgEasyClientUpdateRequest,
   type WgEasyConnection,
   type WgEasyDeleteResult,
+  type WgEasyLiveArtifact,
   type WgEasyProbe,
 } from '@wg-easy-plane/wg-easy-adapter';
 
@@ -104,6 +105,8 @@ type ProbeAdapter = {
   enableClient?(clientId: number): Promise<void>;
   disableClient?(clientId: number): Promise<void>;
   deleteClient?(clientId: number): Promise<WgEasyDeleteResult>;
+  getConfiguration?(clientId: number): Promise<WgEasyLiveArtifact>;
+  getQrCode?(clientId: number): Promise<WgEasyLiveArtifact>;
 };
 export type NodeAdapterFactory = (connection: WgEasyConnection) => ProbeAdapter;
 
@@ -628,6 +631,27 @@ export class NodeService {
       if (!adapter.deleteClient)
         throw new Error('Adapter cannot delete clients');
       return adapter.deleteClient(remoteClientId);
+    });
+  }
+
+  async getRemoteConfiguration(
+    nodeId: string,
+    remoteClientId: number,
+  ): Promise<WgEasyLiveArtifact> {
+    return this.#mutate(nodeId, async (adapter) => {
+      if (!adapter.getConfiguration)
+        throw new Error('Adapter cannot read configurations');
+      return adapter.getConfiguration(remoteClientId);
+    });
+  }
+
+  async getRemoteQrCode(
+    nodeId: string,
+    remoteClientId: number,
+  ): Promise<WgEasyLiveArtifact> {
+    return this.#mutate(nodeId, async (adapter) => {
+      if (!adapter.getQrCode) throw new Error('Adapter cannot read QR images');
+      return adapter.getQrCode(remoteClientId);
     });
   }
 

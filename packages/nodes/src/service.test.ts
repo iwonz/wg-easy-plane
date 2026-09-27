@@ -85,6 +85,22 @@ function createFixture() {
         if (mutationState.error) throw mutationState.error;
         return 'not_found';
       },
+      async getConfiguration(clientId) {
+        mutations.push(`configuration:${clientId}`);
+        if (mutationState.error) throw mutationState.error;
+        return {
+          bytes: Uint8Array.from([1, 2, 3]),
+          mediaType: 'application/octet-stream',
+        };
+      },
+      async getQrCode(clientId) {
+        mutations.push(`qr:${clientId}`);
+        if (mutationState.error) throw mutationState.error;
+        return {
+          bytes: Uint8Array.from([4, 5, 6]),
+          mediaType: 'image/svg+xml',
+        };
+      },
     }),
   });
 
@@ -217,6 +233,41 @@ describe('NodeService', () => {
       fixture.service.deleteRemoteClient(node.id, 77),
     ).rejects.toMatchObject({ code: 'NODE_NOT_MUTABLE' });
     expect(fixture.mutations).toEqual(['create', 'update:77']);
+  });
+
+  it('delegates live artifacts only through a healthy compatible node', async () => {
+    const fixture = createFixture();
+    fixture.outcomes.push(healthyProbe());
+    const node = await fixture.service.create(createInput());
+
+    await expect(
+      fixture.service.getRemoteConfiguration(node.id, 77),
+    ).resolves.toEqual({
+      bytes: Uint8Array.from([1, 2, 3]),
+      mediaType: 'application/octet-stream',
+    });
+    await expect(fixture.service.getRemoteQrCode(node.id, 77)).resolves.toEqual(
+      {
+        bytes: Uint8Array.from([4, 5, 6]),
+        mediaType: 'image/svg+xml',
+      },
+    );
+    expect(fixture.mutations).toEqual(['configuration:77', 'qr:77']);
+
+    fixture.mutationState.error = new WgEasyAdapterError({
+      code: 'AUTH_FAILED',
+      operation: 'configuration',
+    });
+    await expect(
+      fixture.service.getRemoteConfiguration(node.id, 77),
+    ).rejects.toMatchObject({ code: 'AUTH_FAILED' });
+    expect(fixture.service.get(node.id)).toMatchObject({
+      status: 'auth_failed',
+      lastErrorCode: 'AUTH_FAILED',
+    });
+    await expect(
+      fixture.service.getRemoteQrCode(node.id, 77),
+    ).rejects.toMatchObject({ code: 'NODE_NOT_MUTABLE' });
   });
 
   it('persists every safe failure class without raw error details', async () => {
