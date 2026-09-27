@@ -136,6 +136,58 @@ export const AmbiguousCreateCandidateListSchema = z
   .strict()
   .openapi('AmbiguousCreateCandidateList');
 
+const prototypeSafeString = z
+  .string()
+  .refine(
+    (value) =>
+      value !== '__proto__' && value !== 'constructor' && value !== 'prototype',
+  );
+const controlSafeString = prototypeSafeString.refine(
+  (value) => !/[\x00-\x1f\x7f]/.test(value),
+);
+const addressString = controlSafeString.min(1);
+
+export const PlacementAdvancedValuesSchema = z
+  .object({
+    ipv4Address: z.string().min(1),
+    ipv6Address: z.string().min(1),
+    preUp: prototypeSafeString,
+    postUp: prototypeSafeString,
+    preDown: prototypeSafeString,
+    postDown: prototypeSafeString,
+    allowedIps: z.array(addressString).nullable(),
+    serverAllowedIps: z.array(addressString),
+    firewallIps: z.array(addressString).nullable(),
+    mtu: z.number().min(1_024).max(9_000),
+    jC: z.number().min(1).max(128).nullable(),
+    jMin: z.number().max(1_279).nullable(),
+    jMax: z.number().max(1_280).nullable(),
+    i1: controlSafeString.nullable(),
+    i2: controlSafeString.nullable(),
+    i3: controlSafeString.nullable(),
+    i4: controlSafeString.nullable(),
+    i5: controlSafeString.nullable(),
+    persistentKeepalive: z.number().min(0).max(65_535),
+    serverEndpoint: addressString.nullable(),
+    dns: z.array(addressString).nullable(),
+  })
+  .strict()
+  .openapi('PlacementAdvancedValues');
+
+export const PlacementAdvancedStateSchema = z
+  .object({
+    clientId: z.uuid(),
+    placementId: z.uuid(),
+    nodeId: z.uuid(),
+    nodeName: z.string().min(1),
+    nodeMode: NodeModeSchema,
+    status: PlacementStatusSchema,
+    supportedAwgGeneration: z.union([z.literal('legacy'), z.null()]),
+    values: PlacementAdvancedValuesSchema,
+  })
+  .strict()
+  .openapi('PlacementAdvancedState');
+
 export type ManagedClient = z.infer<typeof ManagedClientSchema>;
 export type ManagedPlacement = z.infer<typeof ManagedPlacementSchema>;
 export type ManagedClientMutationResult = z.infer<
@@ -150,6 +202,12 @@ export type UpdateManagedClientRequest = z.infer<
 >;
 export type AmbiguousCreateCandidate = z.infer<
   typeof AmbiguousCreateCandidateSchema
+>;
+export type PlacementAdvancedValues = z.infer<
+  typeof PlacementAdvancedValuesSchema
+>;
+export type PlacementAdvancedState = z.infer<
+  typeof PlacementAdvancedStateSchema
 >;
 
 const jsonResponse = <T extends z.ZodType>(schema: T, description: string) => ({
@@ -348,6 +406,47 @@ export const retryManagedPlacementRoute = createRoute({
   request: { params: placementParams },
   responses: {
     200: jsonResponse(ManagedClientMutationResultSchema, 'Client after retry'),
+    ...commonErrors,
+  },
+});
+
+export const getPlacementAdvancedRoute = createRoute({
+  method: 'get',
+  path: '/v1/clients/managed/{clientId}/placements/{placementId}/advanced',
+  operationId: 'getPlacementAdvanced',
+  tags: ['Clients'],
+  summary: 'Read the complete safe advanced placement state',
+  security,
+  request: { params: placementParams },
+  responses: {
+    200: jsonResponse(
+      PlacementAdvancedStateSchema,
+      'Safe mutable fields for the selected placement',
+    ),
+    ...commonErrors,
+  },
+});
+
+export const updatePlacementAdvancedRoute = createRoute({
+  method: 'patch',
+  path: '/v1/clients/managed/{clientId}/placements/{placementId}/advanced',
+  operationId: 'updatePlacementAdvanced',
+  tags: ['Clients'],
+  summary: 'Replace the complete advanced state for one placement',
+  security,
+  request: {
+    params: placementParams,
+    body: {
+      content: {
+        'application/json': { schema: PlacementAdvancedValuesSchema },
+      },
+    },
+  },
+  responses: {
+    200: jsonResponse(
+      PlacementAdvancedStateSchema,
+      'Placement state after the update attempt',
+    ),
     ...commonErrors,
   },
 });

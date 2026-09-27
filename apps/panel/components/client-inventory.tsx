@@ -27,6 +27,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
 import { InventoryStore } from '../stores/inventory-store';
+import { AdvancedPlacementEditor } from './advanced-placement-editor';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -54,6 +55,10 @@ export const ClientInventory = observer(function ClientInventory() {
   } | null>(null);
   const [candidates, setCandidates] = useState<AmbiguousCreateCandidate[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [advancedTarget, setAdvancedTarget] = useState<{
+    clientId: string;
+    placement: ManagedPlacement;
+  } | null>(null);
 
   useEffect(() => {
     void store.loadAll();
@@ -269,6 +274,23 @@ export const ClientInventory = observer(function ClientInventory() {
                                 </Table.Td>
                                 <Table.Td>
                                   <Group gap="xs">
+                                    {placement.remoteClientId !== null &&
+                                    placement.status !== 'ambiguous' &&
+                                    placement.status !== 'deleting' &&
+                                    placement.status !== 'missing' ? (
+                                      <Button
+                                        size="xs"
+                                        variant="light"
+                                        onClick={() =>
+                                          setAdvancedTarget({
+                                            clientId: client.id,
+                                            placement,
+                                          })
+                                        }
+                                      >
+                                        {t('advanced.open')}
+                                      </Button>
+                                    ) : null}
                                     {placement.status === 'ambiguous' ? (
                                       <Button
                                         size="xs"
@@ -619,6 +641,12 @@ export const ClientInventory = observer(function ClientInventory() {
           </Group>
         </Stack>
       </Modal>
+
+      <AdvancedPlacementEditor
+        store={store}
+        target={advancedTarget}
+        onClose={() => setAdvancedTarget(null)}
+      />
     </Paper>
   );
 });

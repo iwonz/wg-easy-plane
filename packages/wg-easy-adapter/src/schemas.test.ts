@@ -122,6 +122,24 @@ describe('wg-easy 15.4.0 schemas', () => {
         firewallIps: ['not-an-address:443/tcp'],
       }).success,
     ).toBe(false);
+    expect(
+      WgEasyClientUpdateRequestSchema.safeParse({
+        ...update,
+        jC: 5,
+        jMin: 10,
+        jMax: 20,
+        i1: '<b 0x10>',
+        i5: '<c 0x20>',
+      }).success,
+    ).toBe(true);
+    expect(
+      WgEasyClientUpdateRequestSchema.safeParse({
+        ...update,
+        ContentPaddingAddition: 32,
+        RekeyAfterTime: 120,
+        DisableCookies: true,
+      }).success,
+    ).toBe(false);
     const incomplete: Partial<typeof update> = { ...update };
     delete incomplete.mtu;
     expect(WgEasyClientUpdateRequestSchema.safeParse(incomplete).success).toBe(

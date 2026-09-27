@@ -100,6 +100,7 @@ function createFixture() {
   ]);
   const createOutcomes: Array<number | Error> = [];
   const deleteOutcomes: Array<'deleted' | 'not_found' | Error> = [];
+  const updateOutcomes: Error[] = [];
   const updates: Array<{
     nodeId: string;
     remoteClientId: number;
@@ -131,6 +132,8 @@ function createFixture() {
       input: WgEasyClientUpdateRequest,
     ) {
       updates.push({ nodeId, remoteClientId, input });
+      const outcome = updateOutcomes.shift();
+      if (outcome) throw outcome;
       const existing = snapshots.get(nodeId)?.get(remoteClientId);
       if (existing) {
         snapshots.get(nodeId)?.set(remoteClientId, {
@@ -200,6 +203,7 @@ function createFixture() {
     snapshots,
     service,
     toggles,
+    updateOutcomes,
     updates,
     advance(ms: number) {
       now = new Date(now.getTime() + ms);
@@ -352,5 +356,131 @@ describe('ManagedClientService', () => {
         .prepare('select count(*) as count from managed_clients')
         .get(),
     ).toEqual({ count: 0 });
+  });
+
+  it('reads safe complete advanced values and rejects AWG values on WireGuard', async () => {
+    const fixture = createFixture();
+    fixture.createOutcomes.push(61);
+    const created = await fixture.service.create({
+      name: 'Advanced synthetic',
+      nodeIds: [NODE_ONE],
+    });
+    const placement = created.placements[0]!;
+
+    const advanced = await fixture.service.getAdvanced(
+      created.id,
+      placement.id,
+    );
+    expect(advanced).toMatchObject({
+      nodeMode: 'wireguard',
+      supportedAwgGeneration: null,
+      values: {
+        ipv4Address: '192.0.2.61',
+        allowedIps: ['10.0.0.0/8'],
+        firewallIps: null,
+        i1: null,
+      },
+    });
+    expect(JSON.stringify(advanced)).not.toMatch(
+      /publicKey|privateKey|presharedKey|configuration|qr/i,
+    );
+
+    await expect(
+      fixture.service.updateAdvanced(created.id, placement.id, {
+        ...advanced.values,
+        jC: 5,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    expect(fixture.updates).toHaveLength(0);
+  });
+
+  it('retains a complete Amnezia update through failure and exact retry', async () => {
+    const fixture = createFixture();
+    fixture.connection.sqlite
+      .prepare("update nodes set mode = 'amnezia' where id = ?")
+      .run(NODE_ONE);
+    fixture.createOutcomes.push(71);
+    const created = await fixture.service.create({
+      name: 'Amnezia synthetic',
+      expiresAt: '2027-05-06T07:08:09.000Z',
+      nodeIds: [NODE_ONE],
+    });
+    const placement = created.placements[0]!;
+    const current = await fixture.service.getAdvanced(created.id, placement.id);
+    const desired = {
+      ...current.values,
+      allowedIps: null,
+      serverAllowedIps: [],
+      firewallIps: [],
+      dns: null,
+      preUp: 'first command\nsecond command',
+      jC: 7,
+      jMin: 11,
+      jMax: 19,
+      i1: '<b 0x10>',
+      i5: '<c 0x20>',
+    };
+    fixture.updateOutcomes.push(new NodeMutationError('UNREACHABLE'));
+
+    const failed = await fixture.service.updateAdvanced(
+      created.id,
+      placement.id,
+      desired,
+    );
+    expect(failed).toMatchObject({
+      nodeMode: 'amnezia',
+      status: 'error',
+      supportedAwgGeneration: 'legacy',
+      values: desired,
+    });
+    const stored = fixture.connection.sqlite
+      .prepare('select desired_payload from placements where id = ?')
+      .get(placement.id) as { desired_payload: string };
+    expect(JSON.parse(stored.desired_payload)).toMatchObject({
+      kind: 'complete',
+      payload: {
+        name: 'Amnezia synthetic',
+        enabled: true,
+        expiresAt: '2027-05-06T07:08:09.000Z',
+        ...desired,
+      },
+    });
+
+    await fixture.service.retry(created.id, placement.id);
+    expect(fixture.updates).toHaveLength(2);
+    expect(fixture.updates[1]?.input).toEqual(fixture.updates[0]?.input);
+    expect(fixture.service.get(created.id).placements[0]?.status).toBe(
+      'active',
+    );
+  });
+
+  it('marks a shared-only placement missing only after a confirming sync', async () => {
+    const fixture = createFixture();
+    fixture.createOutcomes.push(81);
+    const created = await fixture.service.create({
+      name: 'Missing synthetic',
+      nodeIds: [NODE_ONE],
+    });
+    const placement = created.placements[0]!;
+    fixture.snapshots.get(NODE_ONE)?.delete(81);
+    fixture.connection.sqlite
+      .prepare('update placements set desired_payload = ? where id = ?')
+      .run(
+        JSON.stringify({
+          kind: 'shared',
+          name: created.name,
+          expiresAt: null,
+          enabled: true,
+        }),
+        placement.id,
+      );
+
+    await expect(
+      fixture.service.getAdvanced(created.id, placement.id),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(fixture.service.get(created.id).placements[0]).toMatchObject({
+      status: 'missing',
+      lastErrorCode: 'SNAPSHOT_MISSING',
+    });
   });
 });

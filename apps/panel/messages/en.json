@@ -174,6 +174,33 @@
     "modes": {
       "wireguard": "WireGuard",
       "amnezia": "AmneziaWG"
+    },
+    "advanced": {
+      "open": "Advanced",
+      "title": "Advanced settings · {node}",
+      "loading": "Loading advanced placement settings",
+      "loadFailure": "The validated placement state could not be loaded. Synchronize the node and try again.",
+      "updateFailure": "The desired settings are saved, but the node did not confirm the update. Retry from the placement actions.",
+      "unset": "Not set (null)",
+      "ipv4Address": "IPv4 address",
+      "ipv6Address": "IPv6 address",
+      "mtu": "MTU",
+      "persistentKeepalive": "Persistent keepalive",
+      "allowedIps": "Allowed IPs (one per line)",
+      "serverAllowedIps": "Server allowed IPs (one per line)",
+      "firewallIps": "Firewall IPs (one per line)",
+      "dns": "DNS servers (one per line)",
+      "serverEndpoint": "Server endpoint",
+      "hooks": "Hooks",
+      "preUp": "Pre-up",
+      "postUp": "Post-up",
+      "preDown": "Pre-down",
+      "postDown": "Post-down",
+      "amneziaTitle": "AmneziaWG fields",
+      "compatibilityTitle": "wg-easy 15.4.0 compatibility",
+      "compatibilityDescription": "This pinned release supports jC, jMin, jMax and i1–i5. Newer AWG 3.0/3.1 padding, rekey, cookie and handshake controls are not present in its update API and are intentionally not sent.",
+      "cancel": "Cancel",
+      "save": "Save advanced settings"
     }
   },
   "tokens": {

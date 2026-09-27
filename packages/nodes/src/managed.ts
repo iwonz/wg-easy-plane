@@ -2,10 +2,14 @@ import { randomUUID } from 'node:crypto';
 import {
   CreateManagedClientRequestSchema,
   ManagedClientSchema,
+  PlacementAdvancedStateSchema,
+  PlacementAdvancedValuesSchema,
   UpdateManagedClientRequestSchema,
   type AmbiguousCreateCandidate,
   type CreateManagedClientRequest,
   type ManagedClient,
+  type PlacementAdvancedState,
+  type PlacementAdvancedValues,
   type PlacementStatus,
   type UpdateManagedClientRequest,
 } from '@wg-easy-plane/contracts';
@@ -159,6 +163,34 @@ function updatePayload(
     persistentKeepalive: client.persistentKeepalive,
     serverEndpoint: client.serverEndpoint,
     dns: client.dns,
+  });
+}
+
+function advancedValues(
+  payload: WgEasyClientUpdateRequest,
+): PlacementAdvancedValues {
+  return PlacementAdvancedValuesSchema.parse({
+    ipv4Address: payload.ipv4Address,
+    ipv6Address: payload.ipv6Address,
+    preUp: payload.preUp,
+    postUp: payload.postUp,
+    preDown: payload.preDown,
+    postDown: payload.postDown,
+    allowedIps: payload.allowedIps,
+    serverAllowedIps: payload.serverAllowedIps,
+    firewallIps: payload.firewallIps,
+    mtu: payload.mtu,
+    jC: payload.jC,
+    jMin: payload.jMin,
+    jMax: payload.jMax,
+    i1: payload.i1,
+    i2: payload.i2,
+    i3: payload.i3,
+    i4: payload.i4,
+    i5: payload.i5,
+    persistentKeepalive: payload.persistentKeepalive,
+    serverEndpoint: payload.serverEndpoint,
+    dns: payload.dns,
   });
 }
 
@@ -433,6 +465,93 @@ export class ManagedClientService {
     return this.#result(clientId);
   }
 
+  async getAdvanced(
+    clientId: string,
+    placementId: string,
+  ): Promise<PlacementAdvancedState> {
+    this.#requireActiveClient(clientId);
+    const placement = this.#requirePlacement(clientId, placementId);
+    if (
+      placement.remote_client_id === null ||
+      placement.status === 'ambiguous' ||
+      placement.status === 'deleting' ||
+      placement.status === 'missing'
+    ) {
+      throw new ManagedClientServiceError('CONFLICT');
+    }
+    const payload = await this.#ensureCompletePayload(placement);
+    if (!payload) throw new ManagedClientServiceError('CONFLICT');
+    return this.#advancedState(
+      clientId,
+      this.#requirePlacement(clientId, placementId),
+      payload,
+    );
+  }
+
+  async updateAdvanced(
+    clientId: string,
+    placementId: string,
+    input: PlacementAdvancedValues,
+  ): Promise<PlacementAdvancedState> {
+    const owner = this.#requireActiveClient(clientId);
+    const placement = this.#requirePlacement(clientId, placementId);
+    const parsed = PlacementAdvancedValuesSchema.safeParse(input);
+    if (
+      placement.remote_client_id === null ||
+      placement.status === 'ambiguous' ||
+      placement.status === 'deleting' ||
+      placement.status === 'missing'
+    ) {
+      throw new ManagedClientServiceError('CONFLICT');
+    }
+    if (
+      !parsed.success ||
+      (placement.node_mode !== 'wireguard' && placement.node_mode !== 'amnezia')
+    ) {
+      throw new ManagedClientServiceError('INVALID_INPUT');
+    }
+    if (
+      placement.node_mode === 'wireguard' &&
+      [
+        parsed.data.jC,
+        parsed.data.jMin,
+        parsed.data.jMax,
+        parsed.data.i1,
+        parsed.data.i2,
+        parsed.data.i3,
+        parsed.data.i4,
+        parsed.data.i5,
+      ].some((value) => value !== null)
+    ) {
+      throw new ManagedClientServiceError('INVALID_INPUT');
+    }
+    const complete = WgEasyClientUpdateRequestSchema.safeParse({
+      name: owner.name,
+      enabled: owner.enabled === 1,
+      expiresAt:
+        owner.expires_at === null
+          ? null
+          : new Date(owner.expires_at).toISOString(),
+      ...parsed.data,
+    });
+    if (!complete.success) throw new ManagedClientServiceError('INVALID_INPUT');
+    this.connection.sqlite
+      .prepare(
+        'update placements set desired_payload = ?, updated_at = ? where id = ?',
+      )
+      .run(
+        JSON.stringify({ kind: 'complete', payload: complete.data }),
+        this.now().getTime(),
+        placementId,
+      );
+    await this.#applyCompleteUpdate(placementId);
+    const current = this.#requirePlacement(clientId, placementId);
+    const desired = this.#parseDesired(current.desired_payload);
+    if (desired.kind !== 'complete')
+      throw new ManagedClientServiceError('CONFLICT');
+    return this.#advancedState(clientId, current, desired.payload);
+  }
+
   listAmbiguousCandidates(
     clientId: string,
     placementId: string,
@@ -627,27 +746,35 @@ export class ManagedClientService {
   ): Promise<WgEasyClientUpdateRequest | null> {
     const parsed = this.#parseDesired(placement.desired_payload);
     if (parsed.kind === 'complete') return parsed.payload;
-    await this.#syncAndHydrate(placement.id);
+    const hydration = await this.#syncAndHydrate(placement.id);
     const current = this.#requirePlacementById(placement.id);
     const hydrated = this.#parseDesired(current.desired_payload);
     if (hydrated.kind === 'complete') return hydrated.payload;
     const now = this.now().getTime();
     this.connection.sqlite
       .prepare(
-        `update placements set status = 'missing', last_error_code = 'SNAPSHOT_MISSING',
+        `update placements set status = ?, last_error_code = ?,
            last_attempt_at = ?, updated_at = ? where id = ?`,
       )
-      .run(now, now, placement.id);
+      .run(
+        hydration === 'missing' ? 'missing' : 'error',
+        hydration === 'missing' ? 'SNAPSHOT_MISSING' : 'SNAPSHOT_UNAVAILABLE',
+        now,
+        now,
+        placement.id,
+      );
     return null;
   }
 
-  async #syncAndHydrate(placementId: string): Promise<void> {
+  async #syncAndHydrate(
+    placementId: string,
+  ): Promise<'hydrated' | 'missing' | 'unavailable'> {
     const placement = this.#requirePlacementById(placementId);
-    if (placement.remote_client_id === null) return;
+    if (placement.remote_client_id === null) return 'unavailable';
     try {
       await this.inventory.syncNode(placement.node_id);
     } catch {
-      return;
+      return 'unavailable';
     }
     const owner = this.#requireClient(placement.managed_client_id);
     try {
@@ -665,9 +792,37 @@ export class ManagedClientService {
           this.now().getTime(),
           placementId,
         );
-    } catch {
-      return;
+      return 'hydrated';
+    } catch (error) {
+      return error instanceof ManagedClientServiceError &&
+        error.code === 'NOT_FOUND'
+        ? 'missing'
+        : 'unavailable';
     }
+  }
+
+  #advancedState(
+    clientId: string,
+    placement: PlacementRow,
+    payload: WgEasyClientUpdateRequest,
+  ): PlacementAdvancedState {
+    if (
+      placement.node_mode !== 'wireguard' &&
+      placement.node_mode !== 'amnezia'
+    ) {
+      throw new ManagedClientServiceError('CONFLICT');
+    }
+    return PlacementAdvancedStateSchema.parse({
+      clientId,
+      placementId: placement.id,
+      nodeId: placement.node_id,
+      nodeName: placement.node_name,
+      nodeMode: placement.node_mode,
+      status: placement.status,
+      supportedAwgGeneration:
+        placement.node_mode === 'amnezia' ? 'legacy' : null,
+      values: advancedValues(payload),
+    });
   }
 
   #payloadFromSnapshot(

@@ -7,12 +7,14 @@ import {
   disableManagedClientRoute,
   enableManagedClientRoute,
   getManagedClientRoute,
+  getPlacementAdvancedRoute,
   linkAmbiguousCandidateRoute,
   listAmbiguousCandidatesRoute,
   listManagedClientsRoute,
   removeManagedPlacementRoute,
   retryManagedPlacementRoute,
   updateManagedClientRoute,
+  updatePlacementAdvancedRoute,
 } from '@wg-easy-plane/contracts';
 import { ManagedClientServiceError } from '@wg-easy-plane/nodes';
 import type { Context } from 'hono';
@@ -158,6 +160,33 @@ export function registerManagedClientRoutes(
     const { clientId, placementId } = context.req.valid('param');
     return context.json(
       await runtime.managedClientService.retry(clientId, placementId),
+      200,
+    );
+  });
+
+  api.openapi(getPlacementAdvancedRoute, async (context) => {
+    const runtime = getRuntime();
+    await authorizeRequest(context, runtime, { requiredScope: 'clients:read' });
+    const { clientId, placementId } = context.req.valid('param');
+    return context.json(
+      await runtime.managedClientService.getAdvanced(clientId, placementId),
+      200,
+    );
+  });
+
+  api.openapi(updatePlacementAdvancedRoute, async (context) => {
+    const runtime = getRuntime();
+    await authorizeRequest(context, runtime, {
+      requiredScope: 'clients:write',
+      mutation: true,
+    });
+    const { clientId, placementId } = context.req.valid('param');
+    return context.json(
+      await runtime.managedClientService.updateAdvanced(
+        clientId,
+        placementId,
+        context.req.valid('json'),
+      ),
       200,
     );
   });

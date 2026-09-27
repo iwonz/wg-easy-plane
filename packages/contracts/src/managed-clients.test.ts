@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CreateManagedClientRequestSchema,
   ManagedClientSchema,
+  PlacementAdvancedStateSchema,
+  PlacementAdvancedValuesSchema,
   UpdateManagedClientRequestSchema,
 } from './managed-clients';
 
@@ -51,5 +53,52 @@ describe('managed client contracts', () => {
     expect(serialized).not.toContain('host');
     expect(serialized).not.toContain('desiredPayload');
     expect(serialized).not.toContain('password');
+  });
+
+  it('accepts only the pinned safe advanced contract', () => {
+    const values = {
+      ipv4Address: '192.0.2.7',
+      ipv6Address: '2001:db8::7',
+      preUp: '',
+      postUp: '',
+      preDown: '',
+      postDown: '',
+      allowedIps: null,
+      serverAllowedIps: ['0.0.0.0/0', '::/0'],
+      firewallIps: ['192.0.2.7:443/tcp'],
+      mtu: 1420,
+      jC: 5,
+      jMin: 10,
+      jMax: 20,
+      i1: '<b 0x10>',
+      i2: null,
+      i3: null,
+      i4: null,
+      i5: '<c 0x20>',
+      persistentKeepalive: 25,
+      serverEndpoint: null,
+      dns: ['192.0.2.53'],
+    };
+    expect(PlacementAdvancedValuesSchema.parse(values)).toEqual(values);
+    expect(
+      PlacementAdvancedValuesSchema.safeParse({
+        ...values,
+        ContentPaddingAddition: 32,
+      }).success,
+    ).toBe(false);
+
+    const state = PlacementAdvancedStateSchema.parse({
+      clientId: '20000000-0000-4000-8000-000000000001',
+      placementId: '30000000-0000-4000-8000-000000000001',
+      nodeId: NODE_ID,
+      nodeName: 'Synthetic node',
+      nodeMode: 'amnezia',
+      status: 'active',
+      supportedAwgGeneration: 'legacy',
+      values,
+    });
+    expect(JSON.stringify(state)).not.toMatch(
+      /publicKey|privateKey|presharedKey|configuration|qr/i,
+    );
   });
 });

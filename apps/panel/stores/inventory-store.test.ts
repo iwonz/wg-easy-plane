@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { DiscoveredClient, ManagedClient } from '@wg-easy-plane/contracts';
+import type {
+  DiscoveredClient,
+  ManagedClient,
+  PlacementAdvancedState,
+} from '@wg-easy-plane/contracts';
 
 import { InventoryStore } from './inventory-store';
 
@@ -190,5 +194,84 @@ describe('InventoryStore', () => {
       `/api/v1/clients/managed/${active.id}/placements/${active.placements[0]!.id}/retry`,
       expect.objectContaining({ method: 'POST', credentials: 'same-origin' }),
     );
+  });
+
+  it('loads and replaces typed advanced state without browser persistence', async () => {
+    const active = managed();
+    const placement = active.placements[0]!;
+    const advanced: PlacementAdvancedState = {
+      clientId: active.id,
+      placementId: placement.id,
+      nodeId: placement.nodeId,
+      nodeName: placement.nodeName,
+      nodeMode: 'wireguard',
+      status: 'active',
+      supportedAwgGeneration: null,
+      values: {
+        ipv4Address: '192.0.2.7',
+        ipv6Address: '2001:db8::7',
+        preUp: '',
+        postUp: '',
+        preDown: '',
+        postDown: '',
+        allowedIps: null,
+        serverAllowedIps: ['0.0.0.0/0', '::/0'],
+        firewallIps: null,
+        mtu: 1420,
+        jC: null,
+        jMin: null,
+        jMax: null,
+        i1: null,
+        i2: null,
+        i3: null,
+        i4: null,
+        i5: null,
+        persistentKeepalive: 25,
+        serverEndpoint: null,
+        dns: ['192.0.2.53'],
+      },
+    };
+    const changed: PlacementAdvancedState = {
+      ...advanced,
+      values: {
+        ...advanced.values,
+        allowedIps: [],
+        dns: ['198.51.100.53'],
+        mtu: 1380,
+      },
+    };
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json(advanced))
+      .mockResolvedValueOnce(Response.json(changed));
+    const store = new InventoryStore(fetcher);
+    store.managedItems = [active];
+
+    await expect(store.loadAdvanced(active.id, placement.id)).resolves.toEqual(
+      advanced,
+    );
+    await expect(
+      store.updateAdvanced(active.id, placement.id, changed.values),
+    ).resolves.toBe(true);
+    expect(store.advancedState).toEqual(changed);
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      `/api/v1/clients/managed/${active.id}/placements/${placement.id}/advanced`,
+      { credentials: 'same-origin' },
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      `/api/v1/clients/managed/${active.id}/placements/${placement.id}/advanced`,
+      expect.objectContaining({
+        method: 'PATCH',
+        credentials: 'same-origin',
+        body: JSON.stringify(changed.values),
+      }),
+    );
+    expect(JSON.stringify(store.advancedState)).not.toMatch(
+      /publicKey|privateKey|configuration|qr/i,
+    );
+    store.clearAdvanced();
+    expect(store.advancedState).toBeNull();
   });
 });

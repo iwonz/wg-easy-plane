@@ -5,6 +5,8 @@ import type {
   ManagedClient,
   ManagedClientMutationResult,
   NodeMetadata,
+  PlacementAdvancedState,
+  PlacementAdvancedValues,
 } from '@wg-easy-plane/contracts';
 
 type Fetcher = typeof globalThis.fetch;
@@ -35,6 +37,9 @@ export class InventoryStore {
   mutating = false;
   failure = false;
   managedFailure = false;
+  advancedState: PlacementAdvancedState | null = null;
+  advancedLoading = false;
+  advancedFailure = false;
 
   constructor(
     private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
@@ -235,6 +240,96 @@ export class InventoryStore {
     );
   }
 
+  async loadAdvanced(
+    clientId: string,
+    placementId: string,
+  ): Promise<PlacementAdvancedState | null> {
+    this.advancedLoading = true;
+    this.advancedFailure = false;
+    try {
+      const response = await this.fetcher(
+        `/api/v1/clients/managed/${clientId}/placements/${placementId}/advanced`,
+        { credentials: 'same-origin' },
+      );
+      if (!response.ok) throw new Error('Unable to load advanced placement');
+      const state = (await response.json()) as PlacementAdvancedState;
+      runInAction(() => {
+        this.advancedState = state;
+      });
+      return state;
+    } catch {
+      runInAction(() => {
+        this.advancedFailure = true;
+        this.advancedState = null;
+      });
+      return null;
+    } finally {
+      runInAction(() => {
+        this.advancedLoading = false;
+      });
+    }
+  }
+
+  async updateAdvanced(
+    clientId: string,
+    placementId: string,
+    values: PlacementAdvancedValues,
+  ): Promise<boolean> {
+    this.advancedLoading = true;
+    this.advancedFailure = false;
+    try {
+      const response = await this.fetcher(
+        `/api/v1/clients/managed/${clientId}/placements/${placementId}/advanced`,
+        {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values),
+        },
+      );
+      if (!response.ok) throw new Error('Unable to update advanced placement');
+      const state = (await response.json()) as PlacementAdvancedState;
+      runInAction(() => {
+        this.advancedState = state;
+        this.managedItems = this.managedItems.map((client) =>
+          client.id !== clientId
+            ? client
+            : {
+                ...client,
+                placements: client.placements.map((placement) =>
+                  placement.id === placementId
+                    ? {
+                        ...placement,
+                        status: state.status,
+                        lastErrorCode:
+                          state.status === 'active'
+                            ? null
+                            : placement.lastErrorCode,
+                        desiredHydrated: true,
+                      }
+                    : placement,
+                ),
+              },
+        );
+      });
+      return true;
+    } catch {
+      runInAction(() => {
+        this.advancedFailure = true;
+      });
+      return false;
+    } finally {
+      runInAction(() => {
+        this.advancedLoading = false;
+      });
+    }
+  }
+
+  clearAdvanced(): void {
+    this.advancedState = null;
+    this.advancedFailure = false;
+  }
+
   async #mutate(
     url: string,
     method: 'POST' | 'PATCH' | 'DELETE',
@@ -291,5 +386,6 @@ export class InventoryStore {
   clearFailure(): void {
     this.failure = false;
     this.managedFailure = false;
+    this.advancedFailure = false;
   }
 }
