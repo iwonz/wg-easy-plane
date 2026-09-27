@@ -53,7 +53,7 @@ const environmentSchema = z.object({
   SYNC_INTERVAL_SECONDS: positiveInteger.default(300),
   NODE_REQUEST_TIMEOUT_MS: positiveInteger.min(100).default(10_000),
   PANEL_PUBLIC_URL: publicOrigin,
-  SUBSCRIPTION_PUBLIC_URL: z.url().optional(),
+  SUBSCRIPTION_PUBLIC_URL: publicOrigin.optional(),
   CONTROL_PLANE_INTERNAL_URL: z.url().optional(),
 });
 

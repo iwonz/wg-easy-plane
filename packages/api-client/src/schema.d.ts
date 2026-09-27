@@ -639,6 +639,110 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/clients/managed/{clientId}/subscription': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the managed client subscription link state */
+    get: operations['getSubscriptionLink'];
+    put?: never;
+    /** Create or rotate a managed client subscription link */
+    post: operations['rotateSubscriptionLink'];
+    /** Revoke a managed client subscription link */
+    delete: operations['revokeSubscriptionLink'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/subscriptions/exchange': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Exchange a fragment token for an HttpOnly session cookie */
+    post: operations['exchangeSubscriptionToken'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/subscriptions/logout': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Clear the subscription session cookie */
+    post: operations['logoutSubscription'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/subscriptions/client': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the session-bound client and placement summary */
+    get: operations['getSubscriptionSummary'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/subscriptions/placements/{placementId}/configuration': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Download a session-bound placement configuration live */
+    get: operations['getSubscriptionConfiguration'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/subscriptions/placements/{placementId}/qrcode.svg': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read a session-bound placement QR image live */
+    get: operations['getSubscriptionQrCode'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1103,6 +1207,53 @@ export interface components {
     };
     LinkManagedPlacementRequest: {
       remoteClientId: number;
+    };
+    SubscriptionLink: {
+      /** Format: uuid */
+      clientId: string;
+      /** @enum {string} */
+      status: 'missing' | 'active' | 'revoked';
+      prefix: string | null;
+      /** Format: uri */
+      url: string | null;
+      version: number | null;
+      /** Format: date-time */
+      createdAt: string | null;
+      /** Format: date-time */
+      rotatedAt: string | null;
+      /** Format: date-time */
+      revokedAt: string | null;
+    };
+    SubscriptionExchangeResponse: {
+      /** Format: date-time */
+      sessionExpiresAt: string;
+    };
+    SubscriptionExchangeRequest: {
+      token: string;
+    };
+    SubscriptionSummary: {
+      /** Format: uuid */
+      clientId: string;
+      name: string;
+      /** Format: date-time */
+      expiresAt: string | null;
+      enabled: boolean;
+      /** @enum {string} */
+      status: 'active' | 'disabled' | 'expired' | 'deleting';
+      placements: components['schemas']['SubscriptionPlacement'][];
+    };
+    SubscriptionPlacement: {
+      /** Format: uuid */
+      id: string;
+      nodeName: string;
+      /** @enum {string|null} */
+      nodeMode: 'wireguard' | 'amnezia' | null;
+      /** @enum {string} */
+      availability:
+        | 'available'
+        | 'client_unavailable'
+        | 'node_unavailable'
+        | 'placement_unavailable';
     };
   };
   responses: never;
@@ -4645,6 +4796,764 @@ export interface operations {
         headers: {
           /** @description Request correlation identifier */
           'X-Request-Id': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getSubscriptionLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clientId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Subscription link state and recoverable active URL */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SubscriptionLink'];
+        };
+      };
+      /** @description Invalid managed client identity */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Managed client or subscription does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Subscription link cannot be changed in this state */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  rotateSubscriptionLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clientId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description New active subscription link */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SubscriptionLink'];
+        };
+      };
+      /** @description Invalid managed client identity */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Managed client or subscription does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Subscription link cannot be changed in this state */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  revokeSubscriptionLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clientId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Subscription access revoked */
+      204: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Invalid managed client identity */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Authentication is required */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Insufficient scope */
+      403: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Managed client or subscription does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Subscription link cannot be changed in this state */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  exchangeSubscriptionToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SubscriptionExchangeRequest'];
+      };
+    };
+    responses: {
+      /** @description Subscription session established */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          'Set-Cookie': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SubscriptionExchangeResponse'];
+        };
+      };
+      /** @description Invalid exchange payload */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Subscription token is invalid */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Too many exchange attempts */
+      429: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  logoutSubscription: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Subscription session cleared */
+      204: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Subscription session is invalid */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getSubscriptionSummary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Safe read-only subscription summary */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SubscriptionSummary'];
+        };
+      };
+      /** @description Subscription session is invalid */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Subscription client does not exist */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getSubscriptionConfiguration: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        placementId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Live client configuration attachment */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          'Content-Disposition': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/octet-stream': string;
+        };
+      };
+      /** @description Invalid placement identity */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Subscription session is invalid */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Placement does not exist for this subscription */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Placement is unavailable */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Upstream artifact request failed safely */
+      502: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+    };
+  };
+  getSubscriptionQrCode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        placementId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Live validated client QR image */
+      200: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'image/svg+xml': string;
+        };
+      };
+      /** @description Invalid placement identity */
+      400: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Subscription session is invalid */
+      401: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Placement does not exist for this subscription */
+      404: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Placement is unavailable */
+      409: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponse'];
+        };
+      };
+      /** @description Upstream artifact request failed safely */
+      502: {
+        headers: {
+          /** @description Request correlation identifier */
+          'X-Request-Id': string;
+          'Cache-Control': 'private, no-store';
+          Pragma: 'no-cache';
+          Expires: '0';
           [name: string]: unknown;
         };
         content: {

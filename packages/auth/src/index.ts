@@ -14,6 +14,11 @@ export {
   USERNAME_PATTERN,
 } from './service';
 export { ApiTokenError, ApiTokenService } from './api-token-service';
+export {
+  SUBSCRIPTION_SESSION_TTL_SECONDS,
+  SubscriptionError,
+  SubscriptionService,
+} from './subscription-service';
 export type {
   AuthenticatedSession,
   PublicAdmin,
@@ -24,3 +29,8 @@ export type {
   ApiTokenPrincipal,
   CreatedApiToken,
 } from './api-token-service';
+export type {
+  SubscriptionLink,
+  SubscriptionPrincipal,
+  SubscriptionSession,
+} from './subscription-service';

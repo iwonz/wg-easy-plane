@@ -1,4 +1,8 @@
-import { ApiTokenService, AuthService } from '@wg-easy-plane/auth';
+import {
+  ApiTokenService,
+  AuthService,
+  SubscriptionService,
+} from '@wg-easy-plane/auth';
 import { loadRuntimeConfig } from '@wg-easy-plane/config';
 import { openDatabase } from '@wg-easy-plane/database';
 import type { DatabaseConnection } from '@wg-easy-plane/database';
@@ -8,6 +12,7 @@ import {
   InventorySyncService,
   ManagedClientService,
   NodeService,
+  SubscriptionReadService,
 } from '@wg-easy-plane/nodes';
 
 export type PanelAuthRuntime = {
@@ -36,7 +41,12 @@ export type PanelDeliveryRuntime = PanelManagedClientRuntime & {
   artifactDeliveryService: ArtifactDeliveryService;
 };
 
-type PanelRuntimeState = PanelDeliveryRuntime & {
+export type PanelSubscriptionRuntime = PanelDeliveryRuntime & {
+  subscriptionService: SubscriptionService;
+  subscriptionReadService: SubscriptionReadService;
+};
+
+type PanelRuntimeState = PanelSubscriptionRuntime & {
   connection: DatabaseConnection;
   inventorySyncScheduler: InventorySyncScheduler;
 };
@@ -74,6 +84,16 @@ export function getPanelAuthRuntime(): PanelAuthRuntime {
       connection,
       nodeService,
     );
+    const subscriptionService = new SubscriptionService(connection, {
+      masterKey: config.appEncryptionKey,
+      ...(config.subscriptionPublicUrl
+        ? { subscriptionPublicUrl: config.subscriptionPublicUrl }
+        : {}),
+    });
+    const subscriptionReadService = new SubscriptionReadService(
+      connection,
+      artifactDeliveryService,
+    );
     const state: PanelRuntimeState = {
       connection,
       authService: new AuthService(connection, {
@@ -86,6 +106,8 @@ export function getPanelAuthRuntime(): PanelAuthRuntime {
       inventorySyncService,
       managedClientService,
       artifactDeliveryService,
+      subscriptionService,
+      subscriptionReadService,
       inventorySyncScheduler,
       trustedOrigin: config.panelPublicUrl.origin,
     };
@@ -113,5 +135,9 @@ export function getPanelManagedClientRuntime(): PanelManagedClientRuntime {
 }
 
 export function getPanelDeliveryRuntime(): PanelDeliveryRuntime {
+  return getPanelAuthRuntime() as PanelRuntimeState;
+}
+
+export function getPanelSubscriptionRuntime(): PanelSubscriptionRuntime {
   return getPanelAuthRuntime() as PanelRuntimeState;
 }

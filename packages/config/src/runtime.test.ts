@@ -76,4 +76,23 @@ describe('runtime configuration', () => {
       }),
     ).toThrow('PANEL_PUBLIC_URL');
   });
+
+  it('accepts only an optional HTTP(S) subscription origin', () => {
+    const config = parseRuntimeConfig({
+      APP_ENCRYPTION_KEY: validKey,
+      PANEL_PUBLIC_URL: validPanelUrl,
+      SUBSCRIPTION_PUBLIC_URL: 'https://subscription.example.test',
+    });
+    expect(config.subscriptionPublicUrl?.origin).toBe(
+      'https://subscription.example.test',
+    );
+    expect(() =>
+      parseRuntimeConfig({
+        APP_ENCRYPTION_KEY: validKey,
+        PANEL_PUBLIC_URL: validPanelUrl,
+        SUBSCRIPTION_PUBLIC_URL:
+          'https://subscription.example.test/path#fragment',
+      }),
+    ).toThrow('SUBSCRIPTION_PUBLIC_URL');
+  });
 });

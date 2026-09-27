@@ -1518,6 +1518,142 @@
         },
         "required": ["remoteClientId"],
         "additionalProperties": false
+      },
+      "SubscriptionLink": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["missing", "active", "revoked"]
+          },
+          "prefix": {
+            "type": ["string", "null"]
+          },
+          "url": {
+            "type": ["string", "null"],
+            "format": "uri"
+          },
+          "version": {
+            "type": ["integer", "null"],
+            "exclusiveMinimum": 0
+          },
+          "createdAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "rotatedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "clientId",
+          "status",
+          "prefix",
+          "url",
+          "version",
+          "createdAt",
+          "rotatedAt",
+          "revokedAt"
+        ],
+        "additionalProperties": false
+      },
+      "SubscriptionExchangeResponse": {
+        "type": "object",
+        "properties": {
+          "sessionExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["sessionExpiresAt"],
+        "additionalProperties": false
+      },
+      "SubscriptionExchangeRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^wgep_sub_[A-Za-z0-9_-]{43}$"
+          }
+        },
+        "required": ["token"],
+        "additionalProperties": false
+      },
+      "SubscriptionSummary": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expiresAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "disabled", "expired", "deleting"]
+          },
+          "placements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionPlacement"
+            }
+          }
+        },
+        "required": [
+          "clientId",
+          "name",
+          "expiresAt",
+          "enabled",
+          "status",
+          "placements"
+        ],
+        "additionalProperties": false
+      },
+      "SubscriptionPlacement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nodeName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nodeMode": {
+            "type": ["string", "null"],
+            "enum": ["wireguard", "amnezia", null]
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "available",
+              "client_unavailable",
+              "node_unavailable",
+              "placement_unavailable"
+            ]
+          }
+        },
+        "required": ["id", "nodeName", "nodeMode", "availability"],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -8564,6 +8700,2159 @@
                 },
                 "required": true,
                 "description": "Request correlation identifier"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/managed/{clientId}/subscription": {
+      "get": {
+        "operationId": "getSubscriptionLink",
+        "tags": ["Subscriptions"],
+        "summary": "Read the managed client subscription link state",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "clientId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscription link state and recoverable active URL",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionLink"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid managed client identity",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Managed client or subscription does not exist",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Subscription link cannot be changed in this state",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "rotateSubscriptionLink",
+        "tags": ["Subscriptions"],
+        "summary": "Create or rotate a managed client subscription link",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "clientId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New active subscription link",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionLink"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid managed client identity",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Managed client or subscription does not exist",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Subscription link cannot be changed in this state",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "revokeSubscriptionLink",
+        "tags": ["Subscriptions"],
+        "summary": "Revoke a managed client subscription link",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "clientId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Subscription access revoked",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid managed client identity",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Managed client or subscription does not exist",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Subscription link cannot be changed in this state",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions/exchange": {
+      "post": {
+        "operationId": "exchangeSubscriptionToken",
+        "tags": ["Subscription access"],
+        "summary": "Exchange a fragment token for an HttpOnly session cookie",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionExchangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Subscription session established",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionExchangeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid exchange payload",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Subscription token is invalid",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many exchange attempts",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions/logout": {
+      "post": {
+        "operationId": "logoutSubscription",
+        "tags": ["Subscription access"],
+        "summary": "Clear the subscription session cookie",
+        "security": [
+          {
+            "subscriptionSession": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Subscription session cleared",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            }
+          },
+          "401": {
+            "description": "Subscription session is invalid",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions/client": {
+      "get": {
+        "operationId": "getSubscriptionSummary",
+        "tags": ["Subscription access"],
+        "summary": "Read the session-bound client and placement summary",
+        "security": [
+          {
+            "subscriptionSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Safe read-only subscription summary",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Subscription session is invalid",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Subscription client does not exist",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions/placements/{placementId}/configuration": {
+      "get": {
+        "operationId": "getSubscriptionConfiguration",
+        "tags": ["Subscription access"],
+        "summary": "Download a session-bound placement configuration live",
+        "security": [
+          {
+            "subscriptionSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "placementId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live client configuration attachment",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              },
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid placement identity",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Subscription session is invalid",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Placement does not exist for this subscription",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Placement is unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream artifact request failed safely",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions/placements/{placementId}/qrcode.svg": {
+      "get": {
+        "operationId": "getSubscriptionQrCode",
+        "tags": ["Subscription access"],
+        "summary": "Read a session-bound placement QR image live",
+        "security": [
+          {
+            "subscriptionSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "placementId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live validated client QR image",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid placement identity",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Subscription session is invalid",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Placement does not exist for this subscription",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Placement is unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream artifact request failed safely",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Request correlation identifier"
+                },
+                "required": true,
+                "description": "Request correlation identifier"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["private, no-store"]
+                },
+                "required": true
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["no-cache"]
+                },
+                "required": true
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["0"]
+                },
+                "required": true
               }
             },
             "content": {

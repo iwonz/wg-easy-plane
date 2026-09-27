@@ -36,6 +36,11 @@ import {
   registerNodeRoutes,
   type NodeApiDependencies,
 } from './nodes';
+import {
+  handleSubscriptionApiError,
+  registerSubscriptionRoutes,
+  type SubscriptionApiDependencies,
+} from './subscriptions';
 import { errorBody } from './types';
 import type { ApiEnvironment } from './types';
 
@@ -55,7 +60,8 @@ export type ApiDependencies = AuthApiDependencies &
   NodeApiDependencies &
   InventoryApiDependencies &
   ManagedClientApiDependencies &
-  DeliveryApiDependencies;
+  DeliveryApiDependencies &
+  SubscriptionApiDependencies;
 
 export function createApi(dependencies: ApiDependencies = {}) {
   const rootApi = new OpenAPIHono<ApiEnvironment>({
@@ -134,6 +140,7 @@ export function createApi(dependencies: ApiDependencies = {}) {
   registerInventoryRoutes(api, dependencies);
   registerManagedClientRoutes(api, dependencies);
   registerDeliveryRoutes(api, dependencies);
+  registerSubscriptionRoutes(api, dependencies);
 
   api.doc31('/openapi.json', openApiDocumentConfig);
   api.get(
@@ -167,6 +174,8 @@ export function createApi(dependencies: ApiDependencies = {}) {
     if (managedClientResponse) return managedClientResponse;
     const deliveryResponse = handleDeliveryApiError(error, context);
     if (deliveryResponse) return deliveryResponse;
+    const subscriptionResponse = handleSubscriptionApiError(error, context);
+    if (subscriptionResponse) return subscriptionResponse;
     const nodeResponse = handleNodeApiError(error, context);
     if (nodeResponse) return nodeResponse;
     return context.json(

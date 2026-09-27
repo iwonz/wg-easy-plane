@@ -39,6 +39,12 @@ describe('generated API client artifacts', () => {
       '/api/v1/clients/managed/{clientId}/placements/{placementId}/qrcode.svg',
       '/api/v1/clients/discovered/{nodeId}/{remoteClientId}/configuration',
       '/api/v1/clients/discovered/{nodeId}/{remoteClientId}/qrcode.svg',
+      '/api/v1/clients/managed/{clientId}/subscription',
+      '/api/v1/subscriptions/exchange',
+      '/api/v1/subscriptions/logout',
+      '/api/v1/subscriptions/client',
+      '/api/v1/subscriptions/placements/{placementId}/configuration',
+      '/api/v1/subscriptions/placements/{placementId}/qrcode.svg',
     ]) {
       expect(source).toContain(`'${path}'`);
     }
@@ -176,5 +182,41 @@ describe('generated API client artifacts', () => {
     expect(qrCacheHeader.schema).toMatchObject({
       enum: ['private, no-store'],
     });
+  });
+
+  it('keeps subscription summaries and exchange bodies credential-free', async () => {
+    const document = JSON.parse(
+      await readFile(path.resolve('packages/api-client/openapi.json'), 'utf8'),
+    ) as {
+      components: {
+        schemas: {
+          SubscriptionSummary: { properties: Record<string, unknown> };
+          SubscriptionPlacement: { properties: Record<string, unknown> };
+          SubscriptionExchangeResponse: {
+            properties: Record<string, unknown>;
+          };
+        };
+      };
+      paths: Record<
+        string,
+        { get?: { security?: Record<string, string[]>[] } }
+      >;
+    };
+    const summary = document.components.schemas.SubscriptionSummary.properties;
+    const placement =
+      document.components.schemas.SubscriptionPlacement.properties;
+    const exchange =
+      document.components.schemas.SubscriptionExchangeResponse.properties;
+
+    expect(summary).not.toHaveProperty('token');
+    expect(summary).not.toHaveProperty('host');
+    expect(placement).not.toHaveProperty('remoteClientId');
+    expect(placement).not.toHaveProperty('desiredPayload');
+    expect(exchange).toHaveProperty('sessionExpiresAt');
+    expect(exchange).not.toHaveProperty('token');
+    expect(exchange).not.toHaveProperty('sessionToken');
+    expect(
+      document.paths['/api/v1/subscriptions/client']?.get?.security,
+    ).toEqual([{ subscriptionSession: [] }]);
   });
 });

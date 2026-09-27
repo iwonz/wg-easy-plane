@@ -65,10 +65,21 @@ describe('panel API', () => {
     expect(document.paths).toHaveProperty(
       '/api/v1/clients/discovered/{nodeId}/{remoteClientId}/qrcode.svg',
     );
+    expect(document.paths).toHaveProperty(
+      '/api/v1/clients/managed/{clientId}/subscription',
+    );
+    expect(document.paths).toHaveProperty('/api/v1/subscriptions/exchange');
+    expect(document.paths).toHaveProperty('/api/v1/subscriptions/client');
+    expect(document.paths).toHaveProperty(
+      '/api/v1/subscriptions/placements/{placementId}/configuration',
+    );
     expect(document.paths['/api/v1/tokens'].post.security).toEqual([
       { cookieAuth: [] },
       { bearerAuth: [] },
     ]);
+    expect(document.paths['/api/v1/subscriptions/client'].get.security).toEqual(
+      [{ subscriptionSession: [] }],
+    );
     expect(document.components.securitySchemes).toMatchObject({
       cookieAuth: { type: 'apiKey', in: 'cookie' },
       refreshCookieAuth: { type: 'apiKey', in: 'cookie' },

@@ -36,3 +36,10 @@ export type {
   ManagedClientPage,
   ManagedClientServiceErrorCode,
 } from './managed';
+export { SubscriptionReadError, SubscriptionReadService } from './subscription';
+export type {
+  SubscriptionClientStatus,
+  SubscriptionPlacementAvailability,
+  SubscriptionReadErrorCode,
+  SubscriptionSummary,
+} from './subscription';
