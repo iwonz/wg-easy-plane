@@ -1,3 +1,4 @@
+export * from './auth';
 export {
   CursorPageSchema,
   CursorQuerySchema,

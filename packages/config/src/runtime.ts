@@ -28,12 +28,31 @@ const encryptionKey = z.string().superRefine((value, context) => {
 
 const positiveInteger = z.coerce.number().int().nonnegative();
 
+const publicOrigin = z.url().superRefine((value, context) => {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return;
+  }
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username !== '' ||
+    url.password !== '' ||
+    url.pathname !== '/' ||
+    url.search !== '' ||
+    url.hash !== ''
+  ) {
+    context.addIssue({ code: 'custom', message: 'must be an HTTP(S) origin' });
+  }
+});
+
 const environmentSchema = z.object({
   APP_ENCRYPTION_KEY: encryptionKey,
   DATABASE_PATH: z.string().min(1).optional(),
   SYNC_INTERVAL_SECONDS: positiveInteger.default(300),
   NODE_REQUEST_TIMEOUT_MS: positiveInteger.min(100).default(10_000),
-  PANEL_PUBLIC_URL: z.url().optional(),
+  PANEL_PUBLIC_URL: publicOrigin,
   SUBSCRIPTION_PUBLIC_URL: z.url().optional(),
   CONTROL_PLANE_INTERNAL_URL: z.url().optional(),
 });
@@ -43,7 +62,7 @@ export type RuntimeConfig = {
   databasePath: string;
   syncIntervalSeconds: number;
   nodeRequestTimeoutMs: number;
-  panelPublicUrl?: URL;
+  panelPublicUrl: URL;
   subscriptionPublicUrl?: URL;
   controlPlaneInternalUrl?: URL;
 };
@@ -104,9 +123,7 @@ export function parseRuntimeConfig(
     databasePath,
     syncIntervalSeconds: result.data.SYNC_INTERVAL_SECONDS,
     nodeRequestTimeoutMs: result.data.NODE_REQUEST_TIMEOUT_MS,
-    ...(result.data.PANEL_PUBLIC_URL
-      ? { panelPublicUrl: new URL(result.data.PANEL_PUBLIC_URL) }
-      : {}),
+    panelPublicUrl: new URL(result.data.PANEL_PUBLIC_URL),
     ...(result.data.SUBSCRIPTION_PUBLIC_URL
       ? { subscriptionPublicUrl: new URL(result.data.SUBSCRIPTION_PUBLIC_URL) }
       : {}),

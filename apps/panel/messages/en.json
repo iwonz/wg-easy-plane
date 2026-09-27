@@ -10,5 +10,26 @@
     "badge": "Panel",
     "title": "WG Easy Plane",
     "description": "The control-plane foundation is ready. Nodes and clients will be added through the next OpenSpec changes."
+  },
+  "auth": {
+    "loading": "Loading authentication state",
+    "setupBadge": "First run",
+    "setupTitle": "Create the administrator",
+    "setupDescription": "This is the only administrator account for this panel.",
+    "loginBadge": "Administrator",
+    "loginTitle": "Sign in",
+    "loginDescription": "Use the administrator credentials configured on first run.",
+    "username": "Username",
+    "password": "Password",
+    "passwordHint": "Use 12 to 128 characters.",
+    "createAdmin": "Create administrator",
+    "signIn": "Sign in",
+    "logout": "Sign out",
+    "signedInAs": "Signed in as {username}",
+    "invalidCredentials": "Invalid username or password.",
+    "rateLimited": "Too many attempts. Try again later.",
+    "requestFailed": "The panel could not complete the authentication request.",
+    "unavailableTitle": "Panel unavailable",
+    "retry": "Try again"
   }
 }

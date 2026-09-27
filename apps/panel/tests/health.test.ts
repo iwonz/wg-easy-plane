@@ -20,6 +20,7 @@ describe('/healthz', () => {
     temporaryDirectories.push(directory);
     vi.stubEnv('APP_ENCRYPTION_KEY', Buffer.alloc(32, 9).toString('base64'));
     vi.stubEnv('DATABASE_PATH', path.join(directory, 'health.sqlite'));
+    vi.stubEnv('PANEL_PUBLIC_URL', 'http://localhost:3000');
 
     const response = GET();
 
@@ -31,6 +32,7 @@ describe('/healthz', () => {
   it('does not expose configuration errors', async () => {
     vi.stubEnv('APP_ENCRYPTION_KEY', 'invalid');
     vi.stubEnv('DATABASE_PATH', 'relative.sqlite');
+    vi.stubEnv('PANEL_PUBLIC_URL', 'http://localhost:3000');
 
     const response = GET();
 

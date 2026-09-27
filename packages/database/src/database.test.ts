@@ -66,6 +66,13 @@ describe('database lifecycle', () => {
     expect(tables).toContain('nodes');
     expect(tables).toContain('managed_clients');
     expect(tables).toContain('placements');
+
+    const indexes = connection.sqlite
+      .prepare("select name from sqlite_master where type = 'index'")
+      .all()
+      .map((row) => (row as { name: string }).name);
+    expect(indexes).toContain('refresh_sessions_family_idx');
+    expect(indexes).toContain('rate_limits_reset_idx');
     connection.close();
   });
 });

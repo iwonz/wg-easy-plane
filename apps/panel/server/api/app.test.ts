@@ -48,8 +48,14 @@ describe('panel API', () => {
     expect(response.status).toBe(200);
     expect(document.openapi).toBe('3.1.0');
     expect(document.paths).toHaveProperty('/api/v1/system/status');
+    expect(document.paths).toHaveProperty('/api/v1/auth/setup');
+    expect(document.paths).toHaveProperty('/api/v1/auth/login');
+    expect(document.paths).toHaveProperty('/api/v1/auth/refresh');
+    expect(document.paths).toHaveProperty('/api/v1/auth/logout');
+    expect(document.paths).toHaveProperty('/api/v1/auth/me');
     expect(document.components.securitySchemes).toMatchObject({
       cookieAuth: { type: 'apiKey', in: 'cookie' },
+      refreshCookieAuth: { type: 'apiKey', in: 'cookie' },
       bearerAuth: { type: 'http', scheme: 'bearer' },
       subscriptionSession: { type: 'apiKey', in: 'cookie' },
     });

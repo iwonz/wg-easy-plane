@@ -38,7 +38,10 @@ export const refreshSessions = sqliteTable(
     revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
     createdAt: timestamps.createdAt,
   },
-  (table) => [index('refresh_sessions_admin_idx').on(table.adminId)],
+  (table) => [
+    index('refresh_sessions_admin_idx').on(table.adminId),
+    index('refresh_sessions_family_idx').on(table.familyId),
+  ],
 );
 
 export const apiTokens = sqliteTable(
@@ -253,7 +256,10 @@ export const rateLimits = sqliteTable(
     attempts: integer('attempts').notNull(),
     resetAt: integer('reset_at', { mode: 'timestamp_ms' }).notNull(),
   },
-  (table) => [primaryKey({ columns: [table.key, table.bucket] })],
+  (table) => [
+    primaryKey({ columns: [table.key, table.bucket] }),
+    index('rate_limits_reset_idx').on(table.resetAt),
+  ],
 );
 
 export const adminRelations = relations(admins, ({ many }) => ({
