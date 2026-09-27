@@ -25,11 +25,12 @@
     "test:e2e": "pnpm build && node scripts/run-e2e.mjs",
     "test:privacy": "node scripts/privacy-audit.mjs",
     "typecheck": "turbo run typecheck",
-    "verify": "pnpm api:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:privacy && pnpm build && openspec validate --all --strict && openspec validate --archived --strict",
+    "verify": "pnpm api:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:privacy && pnpm build && pnpm exec openspec validate --all --strict && pnpm exec openspec validate --archived --strict",
     "verify:release": "pnpm verify && pnpm test:coverage && pnpm test:e2e && pnpm test:containers"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@fission-ai/openspec": "1.11.0",
     "@playwright/test": "1.63.0",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "26.6.3",
