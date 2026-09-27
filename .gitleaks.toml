@@ -8,3 +8,16 @@ description = "Allow inert example variable names, never values"
 paths = ['''\.env\.example$''']
 regexTarget = "line"
 regexes = ['''^[A-Z][A-Z0-9_]*=$''', '''^[A-Z][A-Z0-9_]*=<[^>]+>$''']
+
+[[allowlists]]
+description = "Skip ignored dependency, build, cache, and browser artifact directories in working-tree scans"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)\.turbo/''',
+  '''(^|/)dist/''',
+  '''(^|/)coverage/''',
+  '''(^|/)\.playwright-cli/''',
+  '''(^|/)test-results/''',
+  '''(^|/)playwright-report/'''
+]

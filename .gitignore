@@ -38,6 +38,7 @@ backups/
 playwright-report/
 test-results/
 output/playwright/
+.playwright-cli/
 *.har
 *.trace.zip
 storageState.json

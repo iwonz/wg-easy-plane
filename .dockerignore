@@ -24,5 +24,6 @@ backups
 playwright-report
 test-results
 output/playwright
+.playwright-cli
 .auth
 storageState.json

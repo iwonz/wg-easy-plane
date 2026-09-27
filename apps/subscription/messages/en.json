@@ -1,0 +1,14 @@
+{
+  "shell": {
+    "language": "Language",
+    "colorScheme": "Color scheme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "home": {
+    "badge": "Subscription",
+    "title": "Your VPN configurations",
+    "description": "Open a subscription link provided by your administrator to view available configurations."
+  }
+}

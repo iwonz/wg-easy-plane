@@ -1,0 +1,14 @@
+{
+  "shell": {
+    "language": "Язык",
+    "colorScheme": "Цветовая схема",
+    "light": "Светлая",
+    "dark": "Тёмная",
+    "system": "Системная"
+  },
+  "home": {
+    "badge": "Панель",
+    "title": "WG Easy Plane",
+    "description": "Основа control plane готова. Ноды и клиенты появятся в следующих OpenSpec changes."
+  }
+}

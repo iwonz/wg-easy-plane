@@ -1,0 +1,14 @@
+@import '@mantine/core/styles.css';
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: light-dark(
+    var(--mantine-color-gray-0),
+    var(--mantine-color-dark-8)
+  );
+}

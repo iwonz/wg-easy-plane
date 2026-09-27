@@ -1,0 +1,14 @@
+{
+  "shell": {
+    "language": "Language",
+    "colorScheme": "Color scheme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "home": {
+    "badge": "Panel",
+    "title": "WG Easy Plane",
+    "description": "The control-plane foundation is ready. Nodes and clients will be added through the next OpenSpec changes."
+  }
+}
