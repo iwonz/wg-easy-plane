@@ -1,0 +1,47 @@
+name: Check wg-easy compatibility
+
+on:
+  schedule:
+    - cron: '23 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: wg-easy-upstream-version
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SUPPORTED_VERSION: 15.4.0
+    steps:
+      - name: Compare latest release and create one review issue
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest_tag="$(gh api repos/wg-easy/wg-easy/releases/latest --jq '.tag_name')"
+          latest_version="${latest_tag#v}"
+          if [[ "$latest_version" == "$SUPPORTED_VERSION" ]]; then
+            exit 0
+          fi
+
+          title="[upstream] Review wg-easy ${latest_version} compatibility"
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "${title} in:title" --json number --jq 'length')"
+          if [[ "$existing" != "0" ]]; then
+            exit 0
+          fi
+
+          body="A new public wg-easy release requires a manual compatibility review.
+
+          - Supported by WG Easy Plane: \`${SUPPORTED_VERSION}\`
+          - Latest upstream release: \`${latest_version}\`
+          - Release: https://github.com/wg-easy/wg-easy/releases/tag/${latest_tag}
+          - Pinned API source: https://github.com/wg-easy/wg-easy/tree/v${SUPPORTED_VERSION}/src/server/api
+
+          This issue is informational. Do not widen the version gate until schemas, fixtures, adapter tests, and privacy behavior have been reviewed."
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"

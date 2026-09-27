@@ -34,3 +34,24 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  containers:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [panel, subscription]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: false
+          cache-from: type=gha,scope=ci-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=ci-${{ matrix.target }}
+      - name: Validate Compose model
+        if: matrix.target == 'panel'
+        env:
+          APP_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+        run: docker compose config --quiet

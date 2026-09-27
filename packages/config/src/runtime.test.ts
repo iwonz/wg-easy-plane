@@ -25,6 +25,7 @@ describe('runtime configuration', () => {
     const config = parseRuntimeConfig({
       APP_ENCRYPTION_KEY: validKey,
       DATABASE_PATH: path.resolve('/tmp', 'synthetic.sqlite'),
+      DATABASE_MIGRATIONS_PATH: path.resolve('/tmp', 'migrations'),
       SYNC_INTERVAL_SECONDS: '0',
       NODE_REQUEST_TIMEOUT_MS: '2500',
       PANEL_PUBLIC_URL: validPanelUrl,
@@ -33,6 +34,9 @@ describe('runtime configuration', () => {
     expect(config.syncIntervalSeconds).toBe(0);
     expect(config.nodeRequestTimeoutMs).toBe(2500);
     expect(config.appEncryptionKey.byteLength).toBe(32);
+    expect(config.databaseMigrationsPath).toBe(
+      path.resolve('/tmp', 'migrations'),
+    );
   });
 
   it('reports only the missing variable name', () => {
@@ -52,6 +56,14 @@ describe('runtime configuration', () => {
         PANEL_PUBLIC_URL: validPanelUrl,
       }),
     ).toThrow('DATABASE_PATH');
+
+    expect(() =>
+      parseRuntimeConfig({
+        APP_ENCRYPTION_KEY: validKey,
+        DATABASE_MIGRATIONS_PATH: 'packages/database/migrations',
+        PANEL_PUBLIC_URL: validPanelUrl,
+      }),
+    ).toThrow('DATABASE_MIGRATIONS_PATH');
   });
 
   it('requires a valid trusted panel origin', () => {

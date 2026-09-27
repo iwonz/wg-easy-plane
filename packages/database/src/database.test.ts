@@ -1,11 +1,17 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import BetterSqlite3 from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { openDatabase } from './database';
 import { checkDatabaseHealth } from './health';
-import { backupDatabase, migrateDatabase } from './migrations';
+import {
+  backupDatabase,
+  hasPendingMigrations,
+  migrateDatabase,
+  resolveDefaultMigrationsFolder,
+} from './migrations';
 
 const temporaryDirectories: string[] = [];
 
@@ -22,6 +28,15 @@ afterEach(() => {
 });
 
 describe('database lifecycle', () => {
+  it('resolves source and packaged migration layouts', () => {
+    expect(resolveDefaultMigrationsFolder(process.cwd())).toBe(
+      path.resolve(process.cwd(), 'packages/database/migrations'),
+    );
+    expect(
+      resolveDefaultMigrationsFolder(path.resolve(process.cwd(), 'apps/panel')),
+    ).toBe(path.resolve(process.cwd(), 'packages/database/migrations'));
+  });
+
   it('enables required pragmas and health queries', () => {
     const databasePath = temporaryDatabasePath();
     const connection = openDatabase(databasePath);
@@ -52,9 +67,46 @@ describe('database lifecycle', () => {
     expect(fs.readFileSync(backupPath!, 'utf8')).toBe('synthetic');
   });
 
+  it('backs up an existing valid database before applying pending migrations', () => {
+    const databasePath = temporaryDatabasePath();
+    const existing = openDatabase(databasePath);
+    existing.sqlite.exec(
+      "create table operator_marker (value text not null); insert into operator_marker values ('preserved')",
+    );
+    existing.close();
+
+    const result = migrateDatabase(databasePath);
+
+    expect(result.migrated).toBe(true);
+    expect(result.backupPath).toMatch(/\.backup-/);
+    const backup = new BetterSqlite3(result.backupPath!, {
+      readonly: true,
+      fileMustExist: true,
+    });
+    expect(
+      backup.prepare('select value from operator_marker').pluck().get(),
+    ).toBe('preserved');
+    backup.close();
+    if (process.platform !== 'win32') {
+      expect(fs.statSync(result.backupPath!).mode & 0o777).toBe(0o600);
+    }
+  });
+
   it('applies the initial migration and exposes core tables', () => {
     const databasePath = temporaryDatabasePath();
-    migrateDatabase(databasePath);
+    expect(hasPendingMigrations(databasePath)).toBe(true);
+    const firstMigration = migrateDatabase(databasePath);
+    expect(firstMigration).toEqual({ backupPath: null, migrated: true });
+    expect(hasPendingMigrations(databasePath)).toBe(false);
+
+    const secondMigration = migrateDatabase(databasePath);
+    expect(secondMigration).toEqual({ backupPath: null, migrated: false });
+    expect(
+      fs
+        .readdirSync(path.dirname(databasePath))
+        .filter((name) => name.includes('.backup-')),
+    ).toEqual([]);
+
     const connection = openDatabase(databasePath);
 
     const tables = connection.sqlite

@@ -1,0 +1,76 @@
+name: wg-easy-plane
+
+services:
+  panel:
+    image: ghcr.io/iwonz/wg-easy-plane-panel:${WGEP_VERSION:-latest}
+    build:
+      context: .
+      target: panel
+    restart: unless-stopped
+    init: true
+    environment:
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?Set APP_ENCRYPTION_KEY to a base64-encoded 32-byte key}
+      DATABASE_PATH: /data/wg-easy-plane.sqlite
+      DATABASE_MIGRATIONS_PATH: /app/migrations
+      PANEL_PUBLIC_URL: ${PANEL_PUBLIC_URL:-http://localhost:3000}
+      SUBSCRIPTION_PUBLIC_URL: ${SUBSCRIPTION_PUBLIC_URL:-http://localhost:3001}
+      SYNC_INTERVAL_SECONDS: ${SYNC_INTERVAL_SECONDS:-300}
+      NODE_REQUEST_TIMEOUT_MS: ${NODE_REQUEST_TIMEOUT_MS:-10000}
+    ports:
+      - '${PANEL_PORT:-3000}:3000'
+    volumes:
+      - panel-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+
+  subscription:
+    profiles:
+      - subscription
+    image: ghcr.io/iwonz/wg-easy-plane-subscription:${WGEP_VERSION:-latest}
+    build:
+      context: .
+      target: subscription
+    restart: unless-stopped
+    init: true
+    environment:
+      CONTROL_PLANE_INTERNAL_URL: http://panel:3000
+    ports:
+      - '${SUBSCRIPTION_PORT:-3001}:3001'
+    depends_on:
+      panel:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3001/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+volumes:
+  panel-data:

@@ -50,6 +50,7 @@ const publicOrigin = z.url().superRefine((value, context) => {
 const environmentSchema = z.object({
   APP_ENCRYPTION_KEY: encryptionKey,
   DATABASE_PATH: z.string().min(1).optional(),
+  DATABASE_MIGRATIONS_PATH: z.string().min(1).optional(),
   SYNC_INTERVAL_SECONDS: positiveInteger.default(300),
   NODE_REQUEST_TIMEOUT_MS: positiveInteger.min(100).default(10_000),
   PANEL_PUBLIC_URL: publicOrigin,
@@ -60,6 +61,7 @@ const environmentSchema = z.object({
 export type RuntimeConfig = {
   appEncryptionKey: Buffer;
   databasePath: string;
+  databaseMigrationsPath?: string;
   syncIntervalSeconds: number;
   nodeRequestTimeoutMs: number;
   panelPublicUrl: URL;
@@ -118,9 +120,19 @@ export function parseRuntimeConfig(
     throw new ConfigError(['DATABASE_PATH']);
   }
 
+  if (
+    result.data.DATABASE_MIGRATIONS_PATH &&
+    !path.isAbsolute(result.data.DATABASE_MIGRATIONS_PATH)
+  ) {
+    throw new ConfigError(['DATABASE_MIGRATIONS_PATH']);
+  }
+
   return {
     appEncryptionKey: Buffer.from(result.data.APP_ENCRYPTION_KEY, 'base64'),
     databasePath,
+    ...(result.data.DATABASE_MIGRATIONS_PATH
+      ? { databaseMigrationsPath: result.data.DATABASE_MIGRATIONS_PATH }
+      : {}),
     syncIntervalSeconds: result.data.SYNC_INTERVAL_SECONDS,
     nodeRequestTimeoutMs: result.data.NODE_REQUEST_TIMEOUT_MS,
     panelPublicUrl: new URL(result.data.PANEL_PUBLIC_URL),
